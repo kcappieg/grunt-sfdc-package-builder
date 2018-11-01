@@ -8,16 +8,11 @@
 
 'use strict';
 
-const callOptionsHeader = {
-  CallOptions: {client: 'Grunt Package.xml Builder'},
-};
-const cacheDir = '.grunt/sfdc_package_builder/';
-const cacheLoc = cacheDir + 'metadata.cache';
-const sessionCache = cacheDir + 'session';
-
 const soap = require('soap');
+const noWildcardTypesLib = require('./lib/metadata-access.js').noWildcardTypes;
 
 module.exports = function(grunt) {
+  const util = require('./lib/utils')(grunt);
 
   // Please see the Grunt documentation for more information regarding task
   // creation: http://gruntjs.com/creating-tasks
@@ -68,129 +63,79 @@ module.exports = function(grunt) {
     }
 
     let metaClient;
-    let sessionHeaderIndex;
+    let sessionHeaderIndex = -1;
 
+    //get session data and metadata soap client
     Promise.all([
-      getSession(creds, options.partnerWsdlLoc, partnerSoapOptions),
+      util.getSession(creds, options.partnerWsdlLoc, partnerSoapOptions),
       soap.createClientAsync(options.metaWsdlLoc)
     ])
+    //get metadata describe
     .then((data) => {
       const {sessionId, metaUrl} = data[0];
       metaClient = data[1];
 
-      metaClient.addSoapHeader(callOptionsHeader, '', 'tns');
+      metaClient.addSoapHeader(util.callOptionsHeader, '', 'tns');
       sessionHeaderIndex = metaClient.addSoapHeader({SessionHeader: {sessionId}}, '', 'tns');
       metaClient.setEndpoint(metaUrl);
 
-      return metaClient.describeMetadataAsync({
-        apiVersion: options.apiVersion
-      });
+      return util.describeMetadata(metaClient, options.apiVersion);
+    })
+    //Handle session id errors
+    .catch((err) => {
+      //Error could be invalid (expired) session, so handle that
+      if (util.isInvalidSession(err)) {
+        return util.login(creds, options.partnerWsdlLoc, partnerSoapOptions)
+          .then((sessionInfo) => {
+            const {sessionId, metaUrl} = sessionInfo;
 
-    }).catch((err) => {
-      return login(creds, options.partnerWsdlLoc, partnerSoapOptions)
-        .then((sessionInfo) => {
-          const {sessionId, metaUrl} = data[0];
+            if (sessionHeaderIndex >= 0) {
+              metaClient.changeSoapHeader(sessionHeaderIndex, {SessionHeader: {sessionId}}, '', 'tns');
+            } else {
+              sessionHeaderIndex = metaClient.addSoapHeader({SessionHeader: {sessionId}}, '', 'tns');
+            }
+            metaClient.setEndpoint(metaUrl);
 
-          metaClient.changeSoapHeader(sessionHeaderIndex, {SessionHeader: {sessionId}}, '', 'tns');
-          metaClient.setEndpoint(metaUrl);
-
-          return metaClient.describeMetadataAsync({
-            apiVersion: options.apiVersion
+            return util.describeMetadata(metaClient, options.apiVersion);
           });
-        });
-    }).then((soapRes) => {
-      logSoapResponse(soapRes, 'Describe Metadata response/request');
+      } else {
+        throw err; //rethrow
+      }
+    })
+    //identify metadata to grab based on user options
+    .then((metaDescribe) => {
+      let wildcardTypes = []; //types we will retrieve using wildcard
+      let typesToQuery = []; //types we will retrieve by itemizing members
 
-      for (let meta of soapRes[0].result.metadataObjects) {
-        console.log(meta);
+      const noWildcardsForVersion = noWildcardTypesLib[options.apiVersion];
+      for (let meta of metaDescribe.metadataObjects) {
+        if (includeMetadataType(meta)) {
+          /************
+            START HERE
+          ************/
+          if (options.useWildcards) {}
+        }
       }
       
       done();
-    }).catch((err) => {
-      console.log(err);
+    })
+    //Log error and exit
+    .catch((err) => {
+      util.logErr(err);
       grunt.warn('Error');
 
-      done(-1);
+      done(6);
     });
 
   });
-
-  function logSoapResponse(res, message='SOAP Call request/response') {
-    grunt.log.debug(message);
-    grunt.log.debug(res[1]);
-    grunt.log.debug(res[2]);
-    grunt.log.debug(res[3]);
-  }
-
-  /**
-   *  @return Promise. Data is object: sessionId, metaUrl
-   */
-  function getSession(creds, wsdlLoc, options) {
-    return new Promise((resolve, reject) => {
-      let sessionCacheInfo = grunt.file.readJSON(sessionCache);
-
-      const credsNoPass = {
-        url: creds.url,
-        username: creds.username
-      };
-
-      if (!sessionCacheInfo.session
-        || !sessionCacheInfo.session.sessionId
-        || !sessionCacheInfo.session.metaUrl
-        || sessionCacheInfo.creds.url !== credsNoPass.url
-        || sessionCacheInfo.creds.username !== credsNoPass.username
-        || sessionCacheInfo.wsdlLoc !== wsdlLoc
-        || sessionCacheInfo.options.endpoint, options.endpoint) {
-
-        reject('cache invalid');
-      }
-
-      resolve(sessionCacheInfo.session);
-    })
-    .catch((reject) => {
-      let err = reject;
-      if (typeof err !== 'string') {
-        err = err.message;
-      }
-      grunt.log.debug(err);
-
-      return login(creds, wsdlLoc, options);
-    });
-  }
-
-  /**
-   *  @return Promise. Data is object: sessionId, metaUrl
-   */
-  function login(creds, wsdlLoc, options) {
-    return soap.createClientAsync(wsdlLoc, options)
-      .then((partnerClient) => {
-        partnerClient.addSoapHeader(callOptionsHeader, '', 'tns');
-
-        return partnerClient.loginAsync({
-          username: creds.username,
-          password: creds.password + creds.token
-        });
-
-      }).then((loginRes) => {
-        logSoapResponse(loginRes,'Login response/request');
-
-        const {sessionId, metadataServerUrl: metaUrl} = loginRes[0].result;
-        const sessionInfo = {sessionId, metaUrl};
-
-        //Cache session info
-        const credsNoPass = {
-          url: creds.url,
-          username: creds.username
-        };
-        const sessionCacheInfo = {
-          session: sessionInfo,
-          creds: credsNoPass,
-          wsdlLoc,
-          options
-        };
-        grunt.file.write(sessionCache, JSON.stringify(sessionCacheInfo));
-
-        return sessionInfo;
-      });
-  }
 };
+
+function includeMetadataType(options, metaDesc) {
+  const all = !!options.all;
+  const included = options.included.includes(meta.xmlName)
+    || options.included.includes(meta.directoryName);
+  const excluded = options.excluded.includes(meta.xmlName)
+    || options.excluded.includes(meta.directoryName);
+
+  return (all && !excluded) || included;
+}

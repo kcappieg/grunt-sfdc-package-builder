@@ -51,7 +51,7 @@ Many of the below options accept a "Metadata Description List" as described belo
 #### MetaList
 Type: `Array<String>`
 
-Array where each element is the value of the `<name>` Node corresponding to the metadata type
+Array where each element is the value of the `<name>` Node corresponding to the metadata type **or** the directory name that will be delivered in the .zip file
 
 #### options.all
 Type: `boolean`
@@ -89,7 +89,9 @@ If `options.all === true`, this option will be ignored
 Type: `boolean | MetaList`
 Default: `false`
 
-If `true`, managed package data will be excluded for all chosen metadata types. If a `MetaList`, each list entry will be excluded, but all others will include managed package metadata. Entries that are not "included" via the `all` or `included` options are ignored
+If `true`, managed package data will be excluded for all chosen metadata types. If a `MetaList`, each list entry will be excluded, but all others will include managed package metadata. Entries that are not "included" via the `all` or `included` options are ignored.
+
+Note that any types explicitly specified by excludeManaged will not use wildcards
 
 #### options.clearCache
 Type: `boolean`
@@ -97,7 +99,7 @@ Default: `false`
 
 If `true`, clears the cache of metadata info after performing all operations.
 
-**Note** You can manually clear the metadata cache before executing this task by deleting the file located at `%PROJECT_ROOT%/.grunt/sfdc-package-builder/metadata.cache`
+**Note** You can manually clear the metadata cache before executing this task by deleting the file located at `%PROJECT_ROOT%/.grunt/sfdc-package-builder/metadata-describe.cache`
 
 #### options.dest
 Type: `String`
