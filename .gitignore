@@ -5,3 +5,9 @@ tmp
 # Sublime
 *.sublime-project
 *.sublime-workspace
+
+# grunt
+.grunt
+
+# package-specific
+creds
