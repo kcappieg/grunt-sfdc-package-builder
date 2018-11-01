@@ -4,6 +4,7 @@ tmp
 
 # Sublime
 *.sublime-project
+*.sublime-workspace
 
 # grunt
 .grunt
