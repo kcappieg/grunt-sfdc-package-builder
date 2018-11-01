@@ -33,12 +33,7 @@ module.exports = function(grunt) {
       options: {
         useWildcards: true,
         dest: 'tmp/package.xml',
-        login: {
-          url: 'https://test.salesforce.com',
-          username: 'kgall@cmfgroup.com.intsandbox',
-          password: 'XXXXXXXXXXXXX',
-          token: 'XXXXXXXXXXXXX',
-        },
+        login: 'creds/intsandbox.json',
       },
       default: {
         all: true

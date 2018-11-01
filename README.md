@@ -97,7 +97,7 @@ Default: `false`
 
 If `true`, clears the cache of metadata info after performing all operations.
 
-**Note** You can manually clear the metadata cache before executing this task by deleting the file located at `%PROJECT_ROOT%/.grunt/sfdc_metadata.cache`
+**Note** You can manually clear the metadata cache before executing this task by deleting the file located at `%PROJECT_ROOT%/.grunt/sfdc-package-builder/metadata.cache`
 
 #### options.dest
 Type: `String`
