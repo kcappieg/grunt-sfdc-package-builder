@@ -10,6 +10,7 @@
 
 const soap = require('soap');
 const noWildcardTypesLib = require('./lib/metadata-access.js').noWildcardTypes;
+const xmlBuilder = require('xmlbuilder');
 
 module.exports = function(grunt) {
   const util = require('./lib/utils')(grunt);
@@ -33,6 +34,8 @@ module.exports = function(grunt) {
     });
 
     Object.assign(options, this.data);
+
+    if (options.excludeManaged === false) options.excludeManaged = [];
 
     if (!options.login) {
       grunt.warn('Login credentials missing');
@@ -64,6 +67,7 @@ module.exports = function(grunt) {
 
     let metaClient;
     let sessionHeaderIndex = -1;
+    let doneCode = 0;
 
     //get session data and metadata soap client
     Promise.all([
@@ -102,29 +106,82 @@ module.exports = function(grunt) {
         throw err; //rethrow
       }
     })
-    //identify metadata to grab based on user options
+    // identify metadata to grab based on user options
+    // then send listMetadata query
     .then((metaDescribe) => {
       let wildcardTypes = []; //types we will retrieve using wildcard
       let typesToQuery = []; //types we will retrieve by itemizing members
 
+      // Putting metadata types requested by config into 2 buckets:
+      // wildcard queries and individual queries
       const noWildcardsForVersion = noWildcardTypesLib[options.apiVersion];
       for (let meta of metaDescribe.metadataObjects) {
-        if (includeMetadataType(meta)) {
-          /************
-            START HERE
-          ************/
-          if (options.useWildcards) {}
+        if (includeMetadataType(options, meta)) {
+          if (options.useWildcards
+              && !noWildcardsForVersion.includes(meta.xmlName)
+              && !options.excludeManaged.includes(meta.xmlName)
+              && !options.excludeManaged.includes(meta.directoryName)) {
+            wildcardTypes.push(meta);
+          } else {
+            typesToQuery.push(meta);
+          }
         }
       }
+
+      // console.log(metaDescribe);
       
-      done();
+      const listQuerySets = [];
+      let counter = 0;
+      let querySet;
+      typesToQuery.forEach((meta) => {
+        if (counter % 3 == 0) {
+          querySet = [];
+          listQuerySets.push(querySet);
+        }
+
+        const folderSuffix = (meta.inFolder && meta.xmlName !== 'EmailTemplate') ?
+          'Folder' : '';
+
+        querySet.push({type: meta.xmlName + folderSuffix});
+        counter++;
+      });
+
+      const listQueryRequests = listQuerySets.map((queryList) => {
+        return metaClient.listMetadataAsync({
+          queries: queryList,
+          asOfVersion: options.apiVersion
+        });
+      });
+
+      //first element of returned promise data array is the wildcard types
+      return Promise.all([wildcardTypes].concat(listQueryRequests));
+    })
+    //handle list results: build package.xml
+    .then((listResults) => {
+      let wildcardTypes = listResults.shift();
+
+
+
+      listResults.forEach((res) => {
+        if (!res[0]) return; //if no elements for type, nothing to do here!
+
+        console.log(res);
+        console.log(res[0].result);
+      });
     })
     //Log error and exit
     .catch((err) => {
       util.logErr(err);
       grunt.warn('Error');
 
-      done(6);
+      doneCode = 6;
+    })
+    .finally(() => {
+      if (options.clearCache) {
+        grunt.file.delete('.grunt/sfdc_package_builder');
+      }
+
+      done(doneCode);
     });
 
   });
@@ -132,10 +189,12 @@ module.exports = function(grunt) {
 
 function includeMetadataType(options, metaDesc) {
   const all = !!options.all;
-  const included = options.included.includes(meta.xmlName)
-    || options.included.includes(meta.directoryName);
-  const excluded = options.excluded.includes(meta.xmlName)
-    || options.excluded.includes(meta.directoryName);
+  const included = !!options.included && 
+    (options.included.includes(meta.xmlName)
+      || options.included.includes(meta.directoryName));
+  const excluded = !!options.excluded && 
+    (options.excluded.includes(meta.xmlName)
+      || options.excluded.includes(meta.directoryName));
 
   return (all && !excluded) || included;
 }

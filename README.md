@@ -24,9 +24,6 @@ This task automates the building of the `package.xml` file required for many SFD
 
 This task will run entirely locally and allows fine-grained control over the resulting package that can be used in a variety of situations including full metadata pulls and deploy manifests.
 
-#### Extensions
-It is unclear if the initial launch will include this capability, but the intention is to include local file diffing for building very targeted packages meant for deploy
-
 ### Usage
 
 In your project's Gruntfile, add a section named `sfdc_package_builder` to the data object passed into `grunt.initConfig()`.
@@ -97,7 +94,7 @@ Note that any types explicitly specified by excludeManaged will not use wildcard
 Type: `boolean`
 Default: `false`
 
-If `true`, clears the cache of metadata info after performing all operations.
+If `true`, clears the cache of metadata info after performing all operations. Cached items include session and metadata describe information but *not* the results of queries since this is volatile information.
 
 **Note** You can manually clear the metadata cache before executing this task by deleting the file located at `%PROJECT_ROOT%/.grunt/sfdc-package-builder/metadata-describe.cache`
 
@@ -142,6 +139,11 @@ grunt.initConfig({
   },
 });
 ```
+
+#### Extensions
+It is unclear if the initial launch will include this capability, but the intention is to include local file diffing for building very targeted packages meant for deploy
+
+Other extensions include package-specific metadata (as in sfdx packages, not necessarily managed packages)
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).

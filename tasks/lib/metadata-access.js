@@ -8,7 +8,7 @@ const noWildcardBacking = {
   defaultVersion: [
     'AnalyticSnapshot',
     'BotVersion',
-    // 'CaseSubjectParticle', //Conflicting documentation
+    'CaseSubjectParticle', //Conflicting documentation on wildcard-appropriate
     'Dashboard',
     'Document',
     'EmailServicesFunction',
