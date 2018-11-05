@@ -67,8 +67,9 @@ module.exports = function(grunt) {
     let metaClient;
     let partnerClient;
 
-    let folderPrototypes = [];
-    let folderNameToType = new Map();
+    const wildcardTypes = []; //types we will retrieve using wildcard
+    const itemizedTypes = []; //types that we will retrieve as itemized entries
+    const folderNameToType = new Map();
     let doneCode = 0;
 
     //get session data and metadata soap client
@@ -87,7 +88,6 @@ module.exports = function(grunt) {
     // identify metadata to grab based on user options
     // then send listMetadata query
     .then((metaDescribe) => {
-      let wildcardTypes = []; //types we will retrieve using wildcard
       let typesToQuery = []; //types we will retrieve by itemizing members
 
       // Putting metadata types requested by config into 2 buckets:
@@ -125,7 +125,6 @@ module.exports = function(grunt) {
           }
 
           folderNameToType.set(metaTypeName, meta.xmlName);
-          folderPrototypes.push(typeQuery);
         }
         typeQuery.type = metaTypeName;
 
@@ -142,49 +141,62 @@ module.exports = function(grunt) {
         });
 
         //first element of returned promise data array is the wildcard types
-        return Promise.all([wildcardTypes].concat(listQueryRequests));
+        return Promise.all(listQueryRequests);
       });
     })
     //handle list results: We need to recurse through folder metadata types
     //to retrieve folder contents as well
     .then((listResults) => {
-      let wildcardTypes = listResults.shift();
-
       /****************************
         START HERE
         Need to nail down nested folders
         to query all items
       ****************************/
 
-      let arr = [];
-      let currentSet;
+      let folderContentQueries = [];
+      let currentQuery;
       let counter = 0;
 
       listResults.forEach((res) => {
         if (!res[0]) return; //if no elements for type, nothing to do here!
 
-        res[0].result.forEach((folder) => {
-          if (counter % 3 == 0) {
-            currentSet = [];
-            arr.push(currentSet);
+        res[0].result.forEach((item) => {
+          // TODO: filter out managed package items here
+
+          if (folderNameToType.has(item.type)) {
+            if (counter % 3 === 0) {
+              currentQuery = [];
+              folderContentQueries.push(currentQuery);
+            }
+            currentQuery.push(
+              {type: folderNameToType.get(item.type), folder: item.fullName}
+            );
+
+            counter++;
+          } else {
+            itemizedTypes.push(item);
           }
-          currentSet.push(
-            {type: folder.type, folder: folder.fullName}
-          );
         });
       });
 
-      const listQueryRequests = arr.map((current) => {
+      const contentQueryRequests = folderContentQueries.map((current) => {
         return metaClient.listMetadataAsync({
           queries: current,
           asOfVersion: options.apiVersion
         });
       });
 
-      return Promise.all(listQueryRequests);
+      return Promise.all(contentQueryRequests);
     })
+    //We have all our itemized data. Build the package.xml
     .then((data) => {
-      console.log(data[0].result);
+      //kept temporarily for reference. Below prints non-managed items
+      /*data.forEach((el) => {
+        if (!el[0] || !el[0].result) return;
+        el[0].result.forEach((el1) => {
+          if (!el1.namespacePrefix) console.log(el1);
+        });
+      });*/
     })
     //Log error and exit
     .catch((err) => {
@@ -220,10 +232,6 @@ class FolderData {
   constructor(metadataType, folderName) {
     this.metadataType = metadataType;
     this.folderName = folderName;
-
-    //stack for querying folder locations
-    //should be emptied entirely after every request cycle
-    this.folderStack = [];
     this.fileLocations = [];
   }
 }
