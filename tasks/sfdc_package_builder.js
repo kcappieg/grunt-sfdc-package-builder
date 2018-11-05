@@ -8,7 +8,6 @@
 
 'use strict';
 
-const soap = require('soap');
 const noWildcardTypesLib = require('./lib/metadata-access.js').noWildcardTypes;
 const xmlBuilder = require('xmlbuilder');
 
@@ -66,45 +65,24 @@ module.exports = function(grunt) {
     }
 
     let metaClient;
-    let sessionHeaderIndex = -1;
+    let partnerClient;
+
+    let folderPrototypes = [];
+    let folderNameToType = new Map();
     let doneCode = 0;
 
     //get session data and metadata soap client
     Promise.all([
-      util.getSession(creds, options.partnerWsdlLoc, partnerSoapOptions),
-      soap.createClientAsync(options.metaWsdlLoc)
+      util.getPartnerClient(creds, options.partnerWsdlLoc, partnerSoapOptions),
+      util.getMetaClient(options.metaWsdlLoc)
     ])
     //get metadata describe
     .then((data) => {
-      const {sessionId, metaUrl} = data[0];
+      partnerClient = data[0];
       metaClient = data[1];
 
-      metaClient.addSoapHeader(util.callOptionsHeader, '', 'tns');
-      sessionHeaderIndex = metaClient.addSoapHeader({SessionHeader: {sessionId}}, '', 'tns');
-      metaClient.setEndpoint(metaUrl);
-
-      return util.describeMetadata(metaClient, options.apiVersion);
-    })
-    //Handle session id errors
-    .catch((err) => {
-      //Error could be invalid (expired) session, so handle that
-      if (util.isInvalidSession(err)) {
-        return util.login(creds, options.partnerWsdlLoc, partnerSoapOptions)
-          .then((sessionInfo) => {
-            const {sessionId, metaUrl} = sessionInfo;
-
-            if (sessionHeaderIndex >= 0) {
-              metaClient.changeSoapHeader(sessionHeaderIndex, {SessionHeader: {sessionId}}, '', 'tns');
-            } else {
-              sessionHeaderIndex = metaClient.addSoapHeader({SessionHeader: {sessionId}}, '', 'tns');
-            }
-            metaClient.setEndpoint(metaUrl);
-
-            return util.describeMetadata(metaClient, options.apiVersion);
-          });
-      } else {
-        throw err; //rethrow
-      }
+      return util.withValidSession(partnerClient, metaClient,
+        (innerMetaClient) => util.describeMetadata(innerMetaClient, options.apiVersion));
     })
     // identify metadata to grab based on user options
     // then send listMetadata query
@@ -127,8 +105,6 @@ module.exports = function(grunt) {
           }
         }
       }
-
-      // console.log(metaDescribe);
       
       const listQuerySets = [];
       let counter = 0;
@@ -139,35 +115,76 @@ module.exports = function(grunt) {
           listQuerySets.push(querySet);
         }
 
-        const folderSuffix = (meta.inFolder && meta.xmlName !== 'EmailTemplate') ?
-          'Folder' : '';
+        let metaTypeName = meta.xmlName;
+        let typeQuery = {};
+        if (meta.inFolder) {
+          if (meta.xmlName === 'EmailTemplate') {
+            metaTypeName = 'EmailFolder';
+          } else {
+            metaTypeName += 'Folder';
+          }
 
-        querySet.push({type: meta.xmlName + folderSuffix});
+          folderNameToType.set(metaTypeName, meta.xmlName);
+          folderPrototypes.push(typeQuery);
+        }
+        typeQuery.type = metaTypeName;
+
+        querySet.push(typeQuery);
         counter++;
       });
 
-      const listQueryRequests = listQuerySets.map((queryList) => {
-        return metaClient.listMetadataAsync({
-          queries: queryList,
-          asOfVersion: options.apiVersion
+      return util.withValidSession(partnerClient, metaClient, (innerMetaClient) => {
+        const listQueryRequests = listQuerySets.map((queryList) => {
+          return innerMetaClient.listMetadataAsync({
+            queries: queryList,
+            asOfVersion: options.apiVersion
+          });
         });
-      });
 
-      //first element of returned promise data array is the wildcard types
-      return Promise.all([wildcardTypes].concat(listQueryRequests));
+        //first element of returned promise data array is the wildcard types
+        return Promise.all([wildcardTypes].concat(listQueryRequests));
+      });
     })
-    //handle list results: build package.xml
+    //handle list results: We need to recurse through folder metadata types
+    //to retrieve folder contents as well
     .then((listResults) => {
       let wildcardTypes = listResults.shift();
 
+      /****************************
+        START HERE
+        Need to nail down nested folders
+        to query all items
+      ****************************/
 
+      let arr = [];
+      let currentSet;
+      let counter = 0;
 
       listResults.forEach((res) => {
         if (!res[0]) return; //if no elements for type, nothing to do here!
 
-        console.log(res);
-        console.log(res[0].result);
+        res[0].result.forEach((folder) => {
+          if (counter % 3 == 0) {
+            currentSet = [];
+            arr.push(currentSet);
+          }
+          currentSet.push(
+            {type: folder.type, folder: folder.fullName}
+          );
+        });
       });
+
+      const listQueryRequests = arr.map((current) => {
+        return metaClient.listMetadataAsync({
+          queries: current,
+          asOfVersion: options.apiVersion
+        });
+      });
+
+      return Promise.all(listQueryRequests);
+    })
+    .then((data) => {
+      console.log(data[0].result);
     })
     //Log error and exit
     .catch((err) => {
@@ -197,4 +214,16 @@ function includeMetadataType(options, metaDesc) {
       || options.excluded.includes(meta.directoryName));
 
   return (all && !excluded) || included;
+}
+
+class FolderData {
+  constructor(metadataType, folderName) {
+    this.metadataType = metadataType;
+    this.folderName = folderName;
+
+    //stack for querying folder locations
+    //should be emptied entirely after every request cycle
+    this.folderStack = [];
+    this.fileLocations = [];
+  }
 }

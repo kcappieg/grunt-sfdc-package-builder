@@ -64,21 +64,70 @@ module.exports = function(grunt) {
       grunt.log.debug(err);
     },
 
+    getPartnerClient: function(creds, wsdlLoc, options) {
+      return soap.createClientAsync(wsdlLoc, options)
+        .then((partnerClient) => {
+          //store references to objects I'll need later
+          partnerClient.$$creds = creds;
+          partnerClient.$$options = options;
+          partnerClient.addSoapHeader(this.callOptionsHeader, '', 'tns');
+
+          return partnerClient;
+        });
+    },
+
+    getMetaClient: function(wsdlLoc) {
+      return soap.createClientAsync(wsdlLoc)
+        .then((metaClient) => {
+          metaClient.$$sessionHeaderIndex = -1;
+          metaClient.addSoapHeader(this.callOptionsHeader, '', 'tns');
+
+          return metaClient;
+        });
+    },
+
+    /**
+     *  Invokes lambda with metaClient as its only argument.
+     *  Note that if there is an invalid session error from a cached session,
+     *  lambda will be invoked again after a successful login
+     */
+    withValidSession: function(partnerClient, metaClient, lambda) {
+      return this.getSession(partnerClient)
+        .then((sessionData) => {
+          this.setSessionData(sessionData, metaClient);
+          return lambda(metaClient);
+        })
+        .catch((err) => {
+          if (this.isInvalidSession(err)) {
+            this.logErr(err);
+
+            //login, then invoke lambda
+            return this.login(partnerClient)
+              .then((sessionData) => {
+                this.setSessionData(sessionData, metaClient);
+                return lambda(metaClient);
+              });
+
+          } else {
+            throw err; //rethrow if not session error
+          }
+        });
+    },
+
     /**
      *  @return Promise. Data is object: sessionId, metaUrl
      */
-    getSession: function getSession(creds, wsdlLoc, options) {
+    getSession: function getSession(partnerClient) {
       return new Promise((resolve, reject) => {
         let sessionCacheInfo = grunt.file.readJSON(SESSION_CACHE);
 
-        const credsHash = this.hashCreds(creds);
+        const credsHash = this.hashCreds(partnerClient.$$creds);
 
         if (!sessionCacheInfo.session
           || !sessionCacheInfo.session.sessionId
           || !sessionCacheInfo.session.metaUrl
           || sessionCacheInfo.credsHash !== credsHash
-          || sessionCacheInfo.wsdlLoc !== wsdlLoc
-          || sessionCacheInfo.options.endpoint !== options.endpoint) {
+          || sessionCacheInfo.options.endpoint !== partnerClient.$$options.endpoint) {
 
           reject('cache invalid');
         }
@@ -88,43 +137,37 @@ module.exports = function(grunt) {
       .catch((reject) => {
         this.logErr(reject);
 
-        return this.login(creds, wsdlLoc, options);
+        return this.login(partnerClient);
       });
     },
 
     /**
      *  @return Promise. Data is object: sessionId, metaUrl
      */
-    login: function login(creds, wsdlLoc, options) {
-      return soap.createClientAsync(wsdlLoc, options)
-        .then((partnerClient) => {
-          partnerClient.addSoapHeader(this.callOptionsHeader, '', 'tns');
+    login: function login(partnerClient) {
+      return partnerClient.loginAsync({
+        username: partnerClient.$$creds.username,
+        password: partnerClient.$$creds.password + partnerClient.$$creds.token
+      })
+      .then((loginRes) => {
+        this.logSoapResponse(loginRes,'Login response/request');
 
-          return partnerClient.loginAsync({
-            username: creds.username,
-            password: creds.password + creds.token
-          });
+        const {sessionId, metadataServerUrl: metaUrl} = loginRes[0].result;
+        const sessionInfo = {sessionId, metaUrl};
 
-        }).then((loginRes) => {
-          this.logSoapResponse(loginRes,'Login response/request');
+        //Cache session info
+        //don't store credentials, just hash. Does not need crypto-security
+        const credsHash = this.hashCreds(partnerClient.$$creds);
+        const sessionCacheInfo = {
+          session: sessionInfo,
+          credsHash,
+          options: partnerClient.$$options,
+          date: new Date().toGMTString(), //for debugging - time stamp
+        };
+        grunt.file.write(SESSION_CACHE, JSON.stringify(sessionCacheInfo));
 
-          const {sessionId, metadataServerUrl: metaUrl} = loginRes[0].result;
-          const sessionInfo = {sessionId, metaUrl};
-
-          //Cache session info
-          //don't store credentials, just hash. Does not need crypto-security
-          const credsHash = this.hashCreds(creds);
-          const sessionCacheInfo = {
-            session: sessionInfo,
-            credsHash,
-            wsdlLoc,
-            options,
-            date: new Date().toGMTString(), //for debugging - time stamp
-          };
-          grunt.file.write(SESSION_CACHE, JSON.stringify(sessionCacheInfo));
-
-          return sessionInfo;
-        });
+        return sessionInfo;
+      });
     },
 
     /**
@@ -163,6 +206,19 @@ module.exports = function(grunt) {
             return metadataCache;
           });
       });
-    }
+    },
+
+    setSessionData: function(sessionData, metaClient) {
+      const {sessionId, metaUrl} = sessionData;
+
+      if (metaClient.$$sessionHeaderIndex > -1) {
+        metaClient.changeSoapHeader(metaClient.$$sessionHeaderIndex,
+          {SessionHeader: {sessionId}}, '', 'tns');
+      } else {
+        metaClient.$$sessionHeaderIndex = metaClient.addSoapHeader(
+          {SessionHeader: {sessionId}}, '', 'tns');
+      }
+      metaClient.setEndpoint(metaUrl);
+    },
   };
 }
