@@ -6,9 +6,12 @@
 "use strict";
 const noWildcardBacking = {
   defaultVersion: [
+    'ActionOverride',
     'AnalyticSnapshot',
     'BotVersion',
     'CaseSubjectParticle', //Conflicting documentation on wildcard-appropriate
+    'CustomField',
+    'CustomLabel',
     'Dashboard',
     'Document',
     'EmailServicesFunction',
@@ -16,9 +19,28 @@ const noWildcardBacking = {
     'EmbeddedServiceBranding',
     'EmbeddedServiceConfig',
     'EmbeddedServiceLiveAgent',
+    'Folder',
+    'FolderShare',
+    'GlobalPicklistValue',
+    'Index',
     'LetterHead',
+    'ListView',
+    'NamedFilter',
+    'Package',
+    'Picklist',
+    'ProfileActionOverride',
+    'RecordType',
     'Report',
-    'StandardValueSet'
+    'SearchLayouts',
+    'SearchSettings',
+    'SharingBaseRule',
+    'SharingReason',
+    'SharingRecalculation',
+    'SocialCustomerServiceSettings',
+    'StandardValueSet',
+    'Territory2Settings',
+    'ValidationRule',
+    'WebLink'
   ],
   '44.0': this.defaultVersion
 };

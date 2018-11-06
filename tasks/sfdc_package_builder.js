@@ -23,9 +23,9 @@ module.exports = function(grunt) {
     // Merge task-specific and/or target-specific options with these defaults.
     var options = this.options({
       all: false,
-      useWildcards: true,
-      metaWsdlLoc: './data/metadata-wsdl.xml', //careful here! probably not correct b/c of relative paths
-      partnerWsdlLoc: './data/partner-wsdl.xml', //careful here! probably not correct b/c of relative paths
+      useWildcards: false,
+      metaWsdlLoc: `${__dirname}/../data/metadata-wsdl.xml`,
+      partnerWsdlLoc: `${__dirname}/../data/partner-wsdl.xml`,
       excludeManaged: false,
       clearCache: false,
       dest: 'package.xml',
@@ -97,9 +97,9 @@ module.exports = function(grunt) {
         if (includeMetadataType(options, meta)) {
           if (options.useWildcards
               && !noWildcardsForVersion.includes(meta.xmlName)
-              && options.excludeManaged !== true
-              && !options.excludeManaged.includes(meta.xmlName)
-              && !options.excludeManaged.includes(meta.directoryName)) {
+              && (options.excludeManaged === true
+                || options.excludeManaged.includes(meta.xmlName)
+                || options.excludeManaged.includes(meta.directoryName))) {
             wildcardTypes.push(meta);
           } else {
             typesToQuery.push(meta);

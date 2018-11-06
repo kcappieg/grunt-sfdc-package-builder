@@ -58,9 +58,11 @@ A flag that indicates that all metadata types should be included
 
 #### options.useWildcards
 Type: `boolean`
-Default value: `true`
+Default value: `false`
 
 A flag that indicates whether or not the wildcard character `*` should be used where available.
+
+Note that metadata retrieved with wildcards will exclude Managed Package components.
 
 #### options.metaWsdlLoc
 Type: `String`
@@ -81,6 +83,11 @@ If `options.all === false`, this option will be ignored
 Type: `MetaList`
 
 If `options.all === true`, this option will be ignored
+
+#### options.includeSpecial
+Type: `MetaList`
+
+This list is for metadata types that are not typically included without a parent metadata type. For instance, `CustomField` is a child of `CustomParent`, but can be queried separately. A common use case would be to retrieve all Custom Fields added to a Managed Object without necessarily querying the Managed Object.
 
 #### options.excludeManaged
 Type: `boolean | MetaList`
