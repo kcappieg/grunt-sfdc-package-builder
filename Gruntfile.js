@@ -32,11 +32,16 @@ module.exports = function(grunt) {
     sfdc_package_builder: {
       options: {
         useWildcards: true,
-        dest: 'tmp/package.xml',
         login: 'creds/intsandbox.json',
       },
-      default: {
+      all: {
+        dest: 'tmp/package-all.xml',
         all: true
+      },
+      noManaged: {
+        dest: 'tmp/package-no_managed.xml',
+        all: true,
+        excludeManaged: true
       }
     },
 

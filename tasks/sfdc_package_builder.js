@@ -68,7 +68,7 @@ module.exports = function(grunt) {
     let partnerClient;
 
     const wildcardTypes = []; //types we will retrieve using wildcard
-    const itemizedTypes = []; //types that we will retrieve as itemized entries
+    const itemizedTypes = {}; //types that we will retrieve as itemized entries
     const folderNameToType = new Map();
     let doneCode = 0;
 
@@ -97,6 +97,7 @@ module.exports = function(grunt) {
         if (includeMetadataType(options, meta)) {
           if (options.useWildcards
               && !noWildcardsForVersion.includes(meta.xmlName)
+              && options.excludeManaged !== true
               && !options.excludeManaged.includes(meta.xmlName)
               && !options.excludeManaged.includes(meta.directoryName)) {
             wildcardTypes.push(meta);
@@ -129,6 +130,7 @@ module.exports = function(grunt) {
         typeQuery.type = metaTypeName;
 
         querySet.push(typeQuery);
+        itemizedTypes[meta.xmlName] = []; //init list
         counter++;
       });
 
@@ -147,12 +149,6 @@ module.exports = function(grunt) {
     //handle list results: We need to recurse through folder metadata types
     //to retrieve folder contents as well
     .then((listResults) => {
-      /****************************
-        START HERE
-        Need to nail down nested folders
-        to query all items
-      ****************************/
-
       let folderContentQueries = [];
       let currentQuery;
       let counter = 0;
@@ -174,7 +170,9 @@ module.exports = function(grunt) {
 
             counter++;
           } else {
-            itemizedTypes.push(item);
+            if (includeMetadataItem(options, item)) {
+              itemizedTypes[item.type].push(item);
+            }
           }
         });
       });
@@ -189,14 +187,56 @@ module.exports = function(grunt) {
       return Promise.all(contentQueryRequests);
     })
     //We have all our itemized data. Build the package.xml
-    .then((data) => {
-      //kept temporarily for reference. Below prints non-managed items
-      /*data.forEach((el) => {
-        if (!el[0] || !el[0].result) return;
-        el[0].result.forEach((el1) => {
-          if (!el1.namespacePrefix) console.log(el1);
+    .then((listResults) => {
+      //first grab any content items from folders
+      listResults.forEach((queryResult) => {
+        if (!queryResult[0]) return; //no elements for folder, nothing to do!
+        queryResult[0].result.forEach((contentItem) => {
+          //filter managed items if applicable
+          if (includeMetadataItem(options, contentItem)) {
+            itemizedTypes[contentItem.type].push(contentItem);            
+          }
         });
-      });*/
+      });
+
+      const pkg = xmlBuilder.create('Package', {encoding: 'UTF-8'})
+        .att('xmlns', 'http://soap.sforce.com/2006/04/metadata');
+
+      //Loop through itemized list items: log and add to package
+      grunt.log.debug('Itemized Metadata:');
+      for (let itemType in itemizedTypes) {
+        const itemList = itemizedTypes[itemType];
+        grunt.log.debug(`Type ${itemType}`);
+
+        if (itemList.length === 0) continue;
+
+        const typeElement = pkg.ele('types');
+        itemList.forEach((item) => {
+          grunt.log.debug(`  ${item.fullName}`);
+
+          typeElement.ele('members').text(item.fullName);
+        });
+
+        typeElement.ele('name').text(itemType);
+      }
+
+      for (let wildcard of wildcardTypes) {
+        pkg.ele({
+          types: {
+            members: '*',
+            name: wildcard.xmlName
+          }
+        });
+      }
+
+      pkg.ele('version').text(options.apiVersion);
+
+      //write package.xml
+      grunt.file.write(options.dest, pkg.end({
+        pretty: true,
+        indent: '  ',
+        newline: '\n',
+      }));
     })
     //Log error and exit
     .catch((err) => {
@@ -226,6 +266,17 @@ function includeMetadataType(options, metaDesc) {
       || options.excluded.includes(meta.directoryName));
 
   return (all && !excluded) || included;
+}
+
+function includeMetadataItem(options, item) {
+  if (item.manageableState !== 'unmanaged') {
+    if (options.excludeManaged === true ||
+        (Array.isArray(options.excludeManaged) && options.excludeManaged.includes(item.type))) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 class FolderData {
