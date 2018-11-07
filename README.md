@@ -85,9 +85,13 @@ Type: `MetaList`
 If `options.all === true`, this option will be ignored
 
 #### options.includeSpecial
-Type: `MetaList`
+Type: `Array<String>`
 
-This list is for metadata types that are not typically included without a parent metadata type. For instance, `CustomField` is a child of `CustomParent`, but can be queried separately. A common use case would be to retrieve all Custom Fields added to a Managed Object without necessarily querying the Managed Object.
+This list is for metadata types that are not typically included without a parent metadata type. For instance, `CustomField` is a child of `CustomObject`, but can be queried separately. A common use case would be to retrieve all Custom Fields added to a Managed Object without necessarily querying the Managed Object.
+
+The entries in the list are the values of the `<name>` XML elements, but not a folder name.
+
+Alternatively, entries in the list can be the XML name of a parent metadata type for which you want to query all children. (i.e. `CustomObject`)
 
 #### options.excludeManaged
 Type: `boolean | MetaList`
@@ -128,10 +132,20 @@ If object, has these properties:
 
 If string, this is the relative filepath for a json-formatted string of the above described schema
 
+#### options.diffDirectory
+Type: `String`
+
+If specified, the directory indicated by this diff is used to build a package.xml using only files that have changed since the last time the `diff` arugment was passed to the task. Note that if all metadata types are included, this task may take awhile as it hashes **all files included** and compares agains the previous hash. Recommended use is to limit the diff-ing to only the metadata types you expect to update regularly.
+
+If a file has not been hashed by this task or if the task's cache is cleared, all files will be marked as changed and added to the `package.xml`
+
+When this option is specified, the `includeSpecial` option is ignored
+
 ### Usage Examples
 
-#### Example
-In this example, the task-global option is to use wildcards where applicable, and the specific task `full_org` will create a package.xml file that includes all possible metadata units and put it at `%PROJECT_ROOT$/full_org_package.xml`
+#### Examples
+##### Basic
+In this example, the task-global option is to use wildcards where applicable, and the specific task `full_org` will create a package.xml file that includes all possible metadata units and put it at `%PROJECT_ROOT$/full_org_package.xml`, excluding any metadata units
 
 ```js
 grunt.initConfig({
@@ -139,9 +153,59 @@ grunt.initConfig({
     options: {
       useWildcards: true
     },
+    basic: {
+      all: true,
+      dest: './basic_package.xml',
+      excludeManaged: true
+    }
+  },
+});
+```
+
+##### Full org with Managed
+This example will build a package to query the full org with managed metadata, so basically a full org dump.
+
+```js
+grunt.initConfig({
+  sfdc_package_builder: {
     full_org: {
       all: true,
+      useWildcards: false,
       dest: './full_org_package.xml',
+      excludeManaged: false
+    }
+  },
+});
+```
+
+##### All unmanaged components
+This example will build a package to query all unmanaged metadata including customizations to managed Custom Objects
+
+```js
+grunt.initConfig({
+  sfdc_package_builder: {
+    unmanaged: {
+      all: true,
+      useWildcards: true,
+      dest: './unmanaged_package.xml',
+      excludeManaged: true,
+      includeSpecial: ['CustomObject']
+    }
+  },
+});
+```
+
+##### Just Apex and Objects
+This example will build a package to query all Apex and Custom Objects, but exclude managed Apex
+
+```js
+grunt.initConfig({
+  sfdc_package_builder: {
+    apex_objects: {
+      useWildcards: false,
+      dest: './apex_objects_package.xml',
+      included: ['ApexClass', 'ApexTrigger', 'CustomObject'],
+      excludeManaged: ['ApexClass','ApexTrigger']
     }
   },
 });
@@ -149,8 +213,6 @@ grunt.initConfig({
 
 #### Extensions
 It is unclear if the initial launch will include this capability, but the intention is to include local file diffing for building very targeted packages meant for deploy
-
-Other extensions include package-specific metadata (as in sfdx packages, not necessarily managed packages)
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).

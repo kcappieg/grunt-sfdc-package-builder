@@ -42,7 +42,14 @@ module.exports = function(grunt) {
         dest: 'tmp/package-no_managed.xml',
         all: true,
         excludeManaged: true
-      }
+      },
+      withChildType: {
+        dest: 'tmp/package-custom_fields.xml',
+        all: false,
+        // included: ['ApexClass'],
+        includeSpecial: ['CustomObject'],
+        excludeManaged: ['CustomField'],
+      },
     },
 
     // Unit tests.
