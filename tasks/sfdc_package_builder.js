@@ -9,7 +9,7 @@
 'use strict';
 
 //Utils
-const packageBuilder = require('./lib/build-package.js');
+const PackageBuilder = require('./lib/build-package.js');
 const diff = require('./lib/diff.js');
 
 module.exports = function(grunt) {
@@ -92,10 +92,12 @@ If not diff-ing, alternatively specify "includeSpecial"`
         done,
       };
 
+      const builder = new PackageBuilder(context);
+
       if (action === 'build') {
-        packageBuilder(context);
+        builder.buildPackage();
       } else if (action === 'diff') {
-        diff.writeHashes(context);
+        builder.writeHashes();
       } else {
         grunt.warn(`Action ${action} not supported`);
         return;

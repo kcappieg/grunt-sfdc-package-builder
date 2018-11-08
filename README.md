@@ -135,7 +135,7 @@ If string, this is the relative filepath for a json-formatted string of the abov
 #### options.diffDirectory
 Type: `String`
 
-If specified, the directory indicated by this diff is used to build a package.xml using only files that have changed since the last time the `diff` arugment was passed to the task. Note that if all metadata types are included, this task may take awhile as it hashes **all files included** and compares agains the previous hash. Recommended use is to limit the diff-ing to only the metadata types you expect to update regularly.
+If specified, the directory indicated by this option is used to build a package.xml using only files that have changed since the last time the `diff` arugment was passed to the task. Note that if all metadata types are included, this task may take awhile as it hashes **all files included** and compares agains the previous hash. Recommended use is to limit the diff-ing to only the metadata types you expect to update regularly.
 
 If a file has not been hashed by this task or if the task's cache is cleared, all files will be marked as changed and added to the `package.xml`
 

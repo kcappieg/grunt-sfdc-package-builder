@@ -4,7 +4,8 @@
 
 "use strict";
 
-const CACHE_DIR = '.grunt/sfdc_package_builder/';
+const TASK_DIR = '.grunt/sfdc_package_builder/';
+const CACHE_DIR = TASK_DIR + 'cache/';
 const META_CACHE = CACHE_DIR + 'metadata-describe.cache';
 const SESSION_CACHE = CACHE_DIR + 'session';
 const INVALID_SESSION_CODE = 'sf:INVALID_SESSION_ID';
@@ -15,6 +16,9 @@ const os = require('os');
 
 module.exports = function(grunt) {
   return {
+    TASK_DIR,
+    CACHE_DIR,
+
     callOptionsHeader: {
       CallOptions: {client: 'Grunt Package.xml Builder'},
     },
@@ -219,6 +223,29 @@ module.exports = function(grunt) {
           {SessionHeader: {sessionId}}, '', 'tns');
       }
       metaClient.setEndpoint(metaUrl);
+    },
+
+    includeMetadataType: function(options, metaDesc) {
+      const all = !!options.all;
+      const included = !!options.included && 
+        (options.included.includes(metaDesc.xmlName)
+          || options.included.includes(metaDesc.directoryName));
+      const excluded = !!options.excluded && 
+        (options.excluded.includes(metaDesc.xmlName)
+          || options.excluded.includes(metaDesc.directoryName));
+
+      return (all && !excluded) || included;
+    },
+
+    includeMetadataItem: function(options, item) {
+      if (item.manageableState !== 'unmanaged') {
+        if (options.excludeManaged === true ||
+            (Array.isArray(options.excludeManaged) && options.excludeManaged.includes(item.type))) {
+          return false;
+        }
+      }
+
+      return true;
     },
   };
 }

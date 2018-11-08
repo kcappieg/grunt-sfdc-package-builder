@@ -50,6 +50,11 @@ module.exports = function(grunt) {
         includeSpecial: ['CustomObject'],
         excludeManaged: ['CustomField'],
       },
+      diffOpts: {
+        all: true,
+        dest: 'tmp/package-diff.xml',
+        diffDirectory: './tmp/retrieve/unpackaged/',
+      }
     },
 
     // Unit tests.
@@ -70,7 +75,8 @@ module.exports = function(grunt) {
   // Whenever the "test" task is run, first clean the "tmp" dir, then run this
   // plugin's task(s), then test the result.
   grunt.registerTask('test', ['clean', 'sfdc_package_builder', 'nodeunit']);
-  grunt.registerTask('dev', ['sfdc_package_builder']);
+  grunt.registerTask('dev', ['sfdc_package_builder:all', 'sfdc_package_builder:noManaged', 'sfdc_package_builder:withChildType']);
+  grunt.registerTask('diff', ['sfdc_package_builder:diffOpts:diff']);
 
   // By default, lint and run all tests.
   grunt.registerTask('default', ['jshint', 'test']);
