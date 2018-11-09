@@ -1,4 +1,4 @@
-# grunt-sfdc-package-builder [![NPM version][npm-image]][npm-url]
+# grunt-sfdc-package-builder [![npm version](https://badge.fury.io/js/grunt-sfdc-package-builder.svg)](https://badge.fury.io/js/grunt-sfdc-package-builder)
 
 > Package.xml builder for SFDC platform as grunt task
 
