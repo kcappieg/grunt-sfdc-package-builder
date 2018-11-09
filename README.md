@@ -1,4 +1,4 @@
-# grunt-sfdc-package-builder
+# grunt-sfdc-package-builder [![NPM version][npm-image]][npm-url]
 
 > Package.xml builder for SFDC platform as grunt task
 
@@ -142,7 +142,7 @@ If object, has these properties:
  - url - Only the host, not the path (i.e. `"https://test.salesforce.com"`)
  - token - The security token for the user
 
-If string, this is the relative filepath for a json-formatted string of the above described schema
+If string, this is the relative filepath for a json file of the above described schema
 
 #### options.diffDirectory
 Type: `String`
@@ -157,13 +157,14 @@ When this option is specified, the `includeSpecial` option is ignored
 
 #### Examples
 ##### Basic
-In this example, the task-global option is to use wildcards where applicable, and the specific task `full_org` will create a package.xml file that includes all possible metadata units and put it at `%PROJECT_ROOT$/full_org_package.xml`, excluding any metadata units
+In this example, the task-global option is to use wildcards where applicable, and the specific task `basic` will create a package.xml file that includes all possible metadata units and put it at `%PROJECT_ROOT$/basic_package.xml`, excluding any managed metadata
 
 ```js
 grunt.initConfig({
   sfdc_package_builder: {
     options: {
-      useWildcards: true
+      useWildcards: true,
+      login: 'credentials/my-sandbox-credentials.json'
     },
     basic: {
       all: true,
@@ -243,5 +244,8 @@ grunt.initConfig({
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).
 
+## Disclaimer
+This release has no unit test coverage. Use at your own risk.
+
 ## Release History
-TBD
+11/8/2018 - 0.0.1-beta.1
