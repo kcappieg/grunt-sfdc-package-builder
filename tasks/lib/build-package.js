@@ -42,9 +42,7 @@ class PackageBuilder {
       cmpListGetter = this.getComponentsForNewPackage.bind(this);
     }
 
-    let doneErr;
-
-    this.metadataDescribePromise.then(cmpListGetter)
+    let buildPkgPromise = this.metadataDescribePromise.then(cmpListGetter)
     //using component lists, build package.xml
     .then((cmpLists) => {
       const {wildcardTypes, itemizedTypes} = cmpLists;
@@ -88,6 +86,8 @@ class PackageBuilder {
         newline: '\n',
       }));
     });
+
+    this.clean(buildPkgPromise);
   }
 
   /**
@@ -418,10 +418,9 @@ class PackageBuilder {
       this.done(false);
     }
 
-    let doneErr;
 
     //get hashes, then write to cache
-    this.getHashes(rootdir)
+    let writePromise = this.getHashes(rootdir)
     .then((literalHashMap) => {
       const hashdir = literalHashMap.hashdir;
 
@@ -433,11 +432,16 @@ class PackageBuilder {
       for (let [filePath, hash] of literalHashMap) {
         this.grunt.file.write(hashdir + filePath, hash);
       }
+    });
 
-      this.done();
-    })
+    this.clean(writePromise);
+  }
+
+  clean(prom) {
+    let doneErr;
+
     //Catch errors and clean up
-    .catch((err) => {
+    prom.catch((err) => {
       this.util.logErr(err);
       this.grunt.warn('Error');
 
