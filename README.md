@@ -17,6 +17,18 @@ Once the plugin has been installed, it may be enabled inside your Gruntfile with
 grunt.loadNpmTasks('grunt-sfdc-package-builder');
 ```
 
+The task takes an argument for the action that is being performed. In most cases, the task will simply build a package.xml file. However, the task has the ability to build only a package manifest for files that have changed since the last time files have been diff-ed. In order to use this diff-ing functionality, you must run the task with the `diff` action:
+
+```shell
+grunt sfdc_package_builder:my_config:diff
+```
+
+Then, to build a package.xml from only the files changed since running the diff action
+
+```shell
+grunt sfdc_package_builder:my_config
+```
+
 ## The "sfdc_package_builder" task
 
 ### Overview
@@ -211,8 +223,22 @@ grunt.initConfig({
 });
 ```
 
-#### Extensions
-It is unclear if the initial launch will include this capability, but the intention is to include local file diffing for building very targeted packages meant for deploy
+##### A Diff config
+This example configuration can be used for both the diff action and building the diff-ed package. It will create hashes of all Apex and Aura files when run with the `diff` action. Then, when run with as a build, it will hash the current state of the files and only include items whose hashes do not match in the package.xml generated
+
+```js
+grunt.initConfig({
+  sfdc_package_builder: {
+    diffOpts: {
+      useWildcards: false,
+      dest: './diff_package.xml',
+      included: ['ApexClass', 'ApexTrigger', 'AuraDefinitionBundle'],
+      excludeManaged: true,
+      diffDirectory: './codebase/src'
+    }
+  },
+});
+```
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).

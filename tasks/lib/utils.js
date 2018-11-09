@@ -127,11 +127,11 @@ module.exports = function(grunt) {
 
         const credsHash = this.hashCreds(partnerClient.$$creds);
 
-        if (!sessionCacheInfo.session
-          || !sessionCacheInfo.session.sessionId
-          || !sessionCacheInfo.session.metaUrl
-          || sessionCacheInfo.credsHash !== credsHash
-          || sessionCacheInfo.options.endpoint !== partnerClient.$$options.endpoint) {
+        if (!sessionCacheInfo.session ||
+          !sessionCacheInfo.session.sessionId ||
+          !sessionCacheInfo.session.metaUrl ||
+          sessionCacheInfo.credsHash !== credsHash ||
+          sessionCacheInfo.options.endpoint !== partnerClient.$$options.endpoint) {
 
           reject('cache invalid');
         }
@@ -184,8 +184,8 @@ module.exports = function(grunt) {
       return new Promise((resolve, reject) => {
         let metaDescribe = grunt.file.readJSON(META_CACHE);
 
-        if (!metaDescribe.apiVersion
-            || !metaDescribe.metadataObjects) {
+        if (!metaDescribe.apiVersion ||
+            !metaDescribe.metadataObjects) {
           reject('Invalid metadata describe cache');
         }
 
@@ -228,11 +228,11 @@ module.exports = function(grunt) {
     includeMetadataType: function(options, metaDesc) {
       const all = !!options.all;
       const included = !!options.included && 
-        (options.included.includes(metaDesc.xmlName)
-          || options.included.includes(metaDesc.directoryName));
+        (options.included.includes(metaDesc.xmlName) ||
+          options.included.includes(metaDesc.directoryName));
       const excluded = !!options.excluded && 
-        (options.excluded.includes(metaDesc.xmlName)
-          || options.excluded.includes(metaDesc.directoryName));
+        (options.excluded.includes(metaDesc.xmlName) ||
+          options.excluded.includes(metaDesc.directoryName));
 
       return (all && !excluded) || included;
     },
@@ -248,4 +248,4 @@ module.exports = function(grunt) {
       return true;
     },
   };
-}
+};

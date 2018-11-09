@@ -42,7 +42,6 @@ const noWildcardBacking = {
     'ValidationRule',
     'WebLink'
   ],
-  '44.0': this.defaultVersion
 };
 
 module.exports = {

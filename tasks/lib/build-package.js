@@ -108,11 +108,11 @@ class PackageBuilder {
     const noWildcardsForVersion = noWildcardTypesLib[this.options.apiVersion];
     for (let meta of metaDescribe.metadataObjects) {
       if (this.util.includeMetadataType(this.options, meta)) {
-        if (this.options.useWildcards
-            && !noWildcardsForVersion.includes(meta.xmlName)
-            && (this.options.excludeManaged === true
-              || this.options.excludeManaged.includes(meta.xmlName)
-              || this.options.excludeManaged.includes(meta.directoryName))) {
+        if (this.options.useWildcards &&
+            !noWildcardsForVersion.includes(meta.xmlName) &&
+            (this.options.excludeManaged === true ||
+              this.options.excludeManaged.includes(meta.xmlName) ||
+              this.options.excludeManaged.includes(meta.directoryName))) {
           wildcardTypes.push(meta);
         } else {
           typesToQuery.push(meta);
@@ -139,7 +139,7 @@ class PackageBuilder {
     let counter = 0;
     let querySet;
     typesToQuery.forEach((meta) => {
-      if (counter % 3 == 0) {
+      if (counter % 3 === 0) {
         querySet = [];
         listQuerySets.push(querySet);
       }
@@ -360,7 +360,7 @@ class PackageBuilder {
     let innerMetaDescribePromise;
 
     if (!!metaDescribe) {
-      innerMetaDescribePromise = new Promise((resolve) => {resolve(metaDescribe)});
+      innerMetaDescribePromise = new Promise((resolve) => resolve(metaDescribe));
     } else {
       innerMetaDescribePromise = this.metadataDescribePromise;
     }

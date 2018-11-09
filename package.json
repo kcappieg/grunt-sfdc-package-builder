@@ -24,8 +24,9 @@
   "devDependencies": {
     "grunt": "^1.0.3",
     "grunt-contrib-clean": "^2.0.0",
+    "grunt-contrib-jasmine": "^2.0.2",
     "grunt-contrib-jshint": "^2.0.0",
-    "grunt-contrib-nodeunit": "^2.0.0"
+    "jasmine": "^3.3.0"
   },
   "keywords": [
     "gruntplugin",
@@ -33,7 +34,6 @@
     "package.xml"
   ],
   "dependencies": {
-    "fast-deep-equal": "^2.0.1",
     "md5": "^2.2.1",
     "soap": "^0.25.0",
     "xmlbuilder": "^10.1.1"

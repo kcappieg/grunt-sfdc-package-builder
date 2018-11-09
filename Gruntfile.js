@@ -16,7 +16,8 @@ module.exports = function(grunt) {
       all: [
         'Gruntfile.js',
         'tasks/*.js',
-        '<%= nodeunit.tests %>'
+        'tasks/**/*.js',
+        '<%= jasmine.sfdc_package_builder.options.specs %>'
       ],
       options: {
         jshintrc: '.jshintrc'
@@ -58,8 +59,14 @@ module.exports = function(grunt) {
     },
 
     // Unit tests.
-    nodeunit: {
-      tests: ['test/*_test.js']
+    jasmine: {
+      sfdc_package_builder: {
+        options: {
+          specs: 'test/specs/*Spec.js',
+          summary: true
+        }
+      }
+      
     }
 
   });
@@ -70,13 +77,23 @@ module.exports = function(grunt) {
   // These plugins provide necessary tasks.
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-contrib-clean');
-  grunt.loadNpmTasks('grunt-contrib-nodeunit');
+  grunt.loadNpmTasks('grunt-contrib-jasmine');
 
   // Whenever the "test" task is run, first clean the "tmp" dir, then run this
   // plugin's task(s), then test the result.
-  grunt.registerTask('test', ['clean', 'sfdc_package_builder', 'nodeunit']);
-  grunt.registerTask('dev', ['sfdc_package_builder:all', 'sfdc_package_builder:noManaged', 'sfdc_package_builder:withChildType']);
-  grunt.registerTask('diff', ['sfdc_package_builder:diffOpts:diff']);
+  const buildTasks = [
+    'sfdc_package_builder:all',
+    'sfdc_package_builder:noManaged',
+    'sfdc_package_builder:withChildType',
+    'sfdc_package_builder:diffOpts'
+  ];
+
+  const diffTasks = ['sfdc_package_builder:diffOpts:diff'];
+
+  //for now, unit test task is a stub - mocking responses sucks!
+  grunt.registerTask('test', ['jasmine']);
+  grunt.registerTask('dev', buildTasks);
+  grunt.registerTask('diff', diffTasks);
 
   // By default, lint and run all tests.
   grunt.registerTask('default', ['jshint', 'test']);

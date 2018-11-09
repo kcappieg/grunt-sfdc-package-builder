@@ -10,7 +10,6 @@
 
 //Utils
 const PackageBuilder = require('./lib/build-package.js');
-const diff = require('./lib/diff.js');
 
 module.exports = function(grunt) {
   const util = require('./lib/utils')(grunt);
@@ -102,6 +101,6 @@ If not diff-ing, alternatively specify "includeSpecial"`
         grunt.warn(`Action ${action} not supported`);
         return;
       }
-    })
+    });
   });
 };
