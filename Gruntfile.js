@@ -55,6 +55,7 @@ module.exports = function(grunt) {
         all: true,
         dest: 'tmp/package-diff.xml',
         diffDirectory: './tmp/retrieve/unpackaged/',
+        diffLog: './d.log',
       }
     },
 

@@ -34,7 +34,9 @@ grunt sfdc_package_builder:my_config
 ### Overview
 This task automates the building of the `package.xml` file required for many SFDC development tasks. Existing tools like https://github.com/benedwards44/packagebuilder do a good job of building packages, but packagebuilder specifically requires the user to either hook into the existing Heroku-hosted app or to spin up a local server, and additionally does not allow granular package building.
 
-This task will run entirely locally and allows fine-grained control over the resulting package that can be used in a variety of situations including full metadata pulls and deploy manifests.
+This task runs locally (besides the callouts to the Salesforce Metadata Api) and allows fine-grained control over the resulting package that can be used in a variety of situations including full metadata pulls and deploy manifests.
+
+This task also offers functionality to build manifests for only changed files via hash diff detection. Additional "actions" are available to support tasks that wish to use this functionality to automatically deploy only changed components.
 
 ### Usage
 
@@ -44,14 +46,48 @@ In your project's Gruntfile, add a section named `sfdc_package_builder` to the d
 grunt.initConfig({
   sfdc_package_builder: {
     options: {
-      // Task-specific options go here.
+      login: 'credentials/sandbox.json'
     },
-    your_target: {
-      // Target-specific file lists and/or options go here.
+    default: {
+      all: true,
+      dest: './package.xml'
     },
+    diff_example: {
+      dest: './diff/package.xml'
+      included: ['ApexClass', 'ApexTrigger'],
+      excludeManaged: true,
+      diffDirectory: './src',
+      diffLog: './diff.log'
+    }
   },
 });
 ```
+
+The exposed task accepts an "action" argument to support the diff-ing capabilities of the task.
+
+#### `build`
+
+This is the default action if none is specified. This builds a package.xml document.
+
+> grunt sfdc_package_builder:default
+
+#### `diff`
+
+This action prepares for a "diff" build by hashing all files in the `diffDirectory` and storing them on disk for reference. Any diff build will rehash selected files and only include them in the result `package.xml` if the hash value is different.
+
+> grunt sfdc_package_builder:diff_example:diff
+
+Then, after you make changes to your code files:
+
+> grunt sfdc_package_builder:diff_example
+
+Notice that you can (and should) use the same configuration when running the `diff` action and the `build` action.
+
+A `build` that uses diff-ing will write changed file paths and their hash values to a log as specified by the `diffLog` option. This log is used by the `commit` action to update saved hash values in the cache which indicates that the new hashes represent the saved state on the Salesforce servers.
+
+#### `commit`
+
+This action "commits" a diff build which previously logged to the file indicated by the `diffLog` option. Running this action allows the task to save the changed file hashes after processing has been completed, for instance after a successful deploy to the Salesforce org.
 
 ### Options
 
@@ -152,6 +188,12 @@ If specified, the directory indicated by this option is used to build a package.
 If a file has not been hashed by this task or if the task's cache is cleared, all files will be marked as changed and added to the `package.xml`
 
 When this option is specified, the `includeSpecial` option is ignored
+
+#### options.diffLog
+Type: `String`
+Default: `./diff.log`
+
+When building a package using a diff, a log file of all diffs detected is written to the file specified by this option. When the `commit` action is used, the diffs in this file are written to the diff cache for use in later diff comparisons, and this file is deleted.
 
 ### Usage Examples
 

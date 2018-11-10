@@ -31,6 +31,7 @@ module.exports = function(grunt) {
       dest: 'package.xml',
       apiVersion: '44.0',
       diffDirectory: '',
+      diffLog: './diff.log'
     });
 
     Object.assign(options, this.data);
@@ -97,6 +98,8 @@ If not diff-ing, alternatively specify "includeSpecial"`
         builder.buildPackage();
       } else if (action === 'diff') {
         builder.writeHashes();
+      } else if (action === 'commit') {
+        builder.commitDiffs();
       } else {
         grunt.warn(`Action ${action} not supported`);
         return;

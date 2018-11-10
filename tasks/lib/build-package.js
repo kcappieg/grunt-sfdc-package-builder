@@ -243,15 +243,21 @@ class PackageBuilder {
     let pairsPromise = this.getHashes(rootdir, metaDescribe)
     .then((literalHashMap) => {
       const hashdir = literalHashMap.hashdir;
-
       const changedPairs = [];
+      const diffLog = {};
 
       const cmpSet = new Set();
       for (let [filePath, hash] of literalHashMap) {
         let newPair;
         try {
-          let oldHash = this.grunt.file.read(hashdir + filePath);
-          if (oldHash !== hash) newPair = extractPair(filePath);
+          const hashFilePath = hashdir + filePath;
+
+          let oldHash = this.grunt.file.read(hashFilePath);
+          if (oldHash !== hash) {
+            newPair = extractPair(filePath);
+
+            diffLog[hashFilePath] = hash;
+          }
         } catch (fileErr) {
           //file not found in old hash means it's a new file and should be added
           this.util.logErr(fileErr);
@@ -265,9 +271,15 @@ class PackageBuilder {
             changedPairs.push(newPair);
             cmpSet.add(setStr);
           }
-
         }
       }
+
+      if (changedPairs.length === 0) {
+        throw new Error('No files have changed - no manifest necessary');
+      }
+
+      //write log of diff-ed files here
+      this.grunt.file.write(this.options.diffLog, JSON.stringify(diffLog));
 
       return changedPairs;
     });
@@ -435,6 +447,24 @@ class PackageBuilder {
     });
 
     this.clean(writePromise);
+  }
+
+  commitDiffs() {
+    let diffLog
+    try {
+      diffLog = this.grunt.file.readJSON(this.options.diffLog);
+    } catch (err) {
+      this.done(this.grunt.util.error(`Problem reading diff log ${this.options.diffLog}`, err));
+      return;
+    }
+
+    for (let prop in diffLog) {
+      this.grunt.file.write(prop, diffLog[prop]);
+    }
+
+    this.grunt.file.delete(this.options.diffLog);
+
+    this.done();
   }
 
   clean(prom) {
