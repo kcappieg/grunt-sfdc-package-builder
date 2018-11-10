@@ -36,7 +36,7 @@ class PackageBuilder {
 
   buildPackage() {
     let cmpListGetter;
-    if (!!this.options.diffDirectory) {
+    if (!!this.options.srcDir) {
       cmpListGetter = this.getChangedComponents.bind(this);
     } else {
       cmpListGetter = this.getComponentsForNewPackage.bind(this);
@@ -85,6 +85,13 @@ class PackageBuilder {
         indent: '  ',
         newline: '\n',
       }));
+
+      if (this.options.srcDir && this.options.deployDir) {
+        this.grunt.file.copy(
+          this.options.dest,
+          path.resolve(this.options.deployDir, 'package.xml')
+        );
+      }
     });
 
     this.clean(buildPkgPromise);
@@ -234,9 +241,9 @@ class PackageBuilder {
    *  and itemizedTypes properties.
    */
   getChangedComponents(metaDescribe) {
-    const rootdir = this.options.diffDirectory;
+    const rootdir = this.options.srcDir;
     if (!rootdir) {
-      this.grunt.warn('Cannot get changed files: no directory specified. Include the "diffDirectory" option');
+      this.grunt.warn('Cannot get changed files: no directory specified. Include the "srcDir" option');
       this.done(false);
     }
 
@@ -283,6 +290,23 @@ class PackageBuilder {
 
       //write log of diff-ed files here
       this.grunt.file.write(this.options.diffLog, JSON.stringify(diffLog));
+
+      //if deployDir specified, write components
+      if (!!this.options.deployDir) {
+        for (let prop in diffLog) {
+          let filePath = diffLog[prop].relativePath;
+          let original = path.resolve(rootdir, filePath);
+          let newFile = path.resolve(this.options.deployDir, filePath);
+
+          this.grunt.file.copy(original, newFile);
+
+          //check for accompanying meta file
+          let originalMeta = original + '-meta.xml';
+          if (this.grunt.file.exists(originalMeta)) {
+            this.grunt.file.copy(originalMeta, newFile + '-meta.xml');
+          }
+        }
+      }
 
       return changedPairs;
     });
@@ -427,9 +451,9 @@ class PackageBuilder {
   }
 
   writeHashes() {
-    const rootdir = this.options.diffDirectory;
+    const rootdir = this.options.srcDir;
     if (!rootdir) {
-      this.grunt.warn('Cannot get changed files: no directory specified. Include the "diffDirectory" option');
+      this.grunt.warn('Cannot get changed files: no directory specified. Include the "srcDir" option');
       this.done(false);
     }
 

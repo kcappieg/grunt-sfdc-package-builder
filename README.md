@@ -29,14 +29,25 @@ Then, to build a package.xml from only the files changed since running the diff 
 grunt sfdc_package_builder:my_config
 ```
 
+To reset the mechanism that discovers changed files, you need to "commit" changes using the `commit` action:
+
+```shell
+grunt sfdc_package_builder:my_config:commit
+```
+
 ## The "sfdc_package_builder" task
 
 ### Overview
-This task automates the building of the `package.xml` file required for many SFDC development tasks. Existing tools like https://github.com/benedwards44/packagebuilder do a good job of building packages, but packagebuilder specifically requires the user to either hook into the existing Heroku-hosted app or to spin up a local server, and additionally does not allow granular package building.
 
-This task runs locally (besides the callouts to the Salesforce Metadata Api) and allows fine-grained control over the resulting package that can be used in a variety of situations including full metadata pulls and deploy manifests.
+**Disclaimer** This package released as "beta" because it is being actively developed at this time in ways that may cause breaking changes and because there are no unit tests. If you, like me, went looking for a bridge between SFDX and old-style metadata pulls but came up short (besides the now dead MavensMate) and now want to use this package, reach out!
+
+This task automates the building of the `package.xml` file required for many SFDC development tasks. Existing tools like https://github.com/benedwards44/packagebuilder do a good job of building package manifests, but packagebuilder specifically requires the user to either hook into the existing Heroku-hosted app or to spin up a local server, and additionally does not allow granular package building.
+
+This task runs locally (besides the callouts to the Salesforce Metadata Api) and allows fine-grained control over the resulting manifest that can be used in a variety of situations including full metadata pulls and deploy manifests.
 
 This task also offers functionality to build manifests for only changed files via hash diff detection. Additional "actions" are available to support tasks that wish to use this functionality to automatically deploy only changed components.
+
+Lastly, an experimental feature being developed is the ability to build a full metadata component directory with manifest from a given source directory for use in a metadata deploy. It is unlikely to be fully featured for all situations and component types as there are other tools to accomplish this, but the primary goal is to allow quick and easy deploys of source code like Apex and Aura that would be developed locally and pushed to Salesforce. The author recommends that a prospective user looks into using standard SFDX techniques to accomplish this, however if you, like me, are in the midst of transitioning and need a stop-gap, this feature may work for you.
 
 ### Usage
 
@@ -69,17 +80,23 @@ The exposed task accepts an "action" argument to support the diff-ing capabiliti
 
 This is the default action if none is specified. This builds a package.xml document.
 
-> grunt sfdc_package_builder:default
+```shell
+grunt sfdc_package_builder:default
+```
 
 #### `diff`
 
 This action prepares for a "diff" build by hashing all files in the `diffDirectory` and storing them on disk for reference. Any diff build will rehash selected files and only include them in the result `package.xml` if the hash value is different.
 
-> grunt sfdc_package_builder:diff_example:diff
+```shell
+grunt sfdc_package_builder:diff_example:diff
+```
 
 Then, after you make changes to your code files:
 
-> grunt sfdc_package_builder:diff_example
+```shell
+grunt sfdc_package_builder:diff_example
+```
 
 Notice that you can (and should) use the same configuration when running the `diff` action and the `build` action.
 
@@ -180,12 +197,14 @@ If object, has these properties:
 
 If string, this is the relative filepath for a json file of the above described schema
 
-#### options.diffDirectory
+#### options.srcDir
 Type: `String`
 
-If specified, the directory indicated by this option is used to build a package.xml using only files that have changed since the last time the `diff` arugment was passed to the task. Note that if all metadata types are included, this task may take awhile as it hashes **all files included** and compares agains the previous hash. Recommended use is to limit the diff-ing to only the metadata types you expect to update regularly.
+If specified, the directory indicated by this option is used to build a package.xml based on files that have changed since the last time the `diff` action was passed to the task. Note that if all metadata types are included, this task may take awhile as it hashes **all files included** and compares agains the previous hash. Recommended use is to limit the diff-ing to only the metadata types you expect to update regularly.
 
 If a file has not been hashed by this task or if the task's cache is cleared, all files will be marked as changed and added to the `package.xml`
+
+This directory is also used as the source for the deploy directory, if specified. All files marked as changed in the diff will be added to the deploy directory
 
 When this option is specified, the `includeSpecial` option is ignored
 
@@ -198,6 +217,13 @@ When building a package using a diff, a log file of all diffs detected is writte
 The diff log is a JSON formatted file where each key corresponds to the location of a file's current hash value, and each value is an object with the following properties:
 - `hash` - Hash string
 - `relativePath` - The path of the file relative to the root directory of the org source
+
+#### options.deployDir
+Type: `String`
+
+If specified, this directory is the location of the metadata deploy source that will be built from files that have changed since the last time the `diff` action was run. The directory will include all source files included in the manifest as well as a copy of the package.xml manifest generated. This directory is usable with the `sfdx force:mdapi:deploy` command
+
+This option is ignored if `options.srcDir` is not specified.
 
 ### Usage Examples
 
@@ -289,9 +315,6 @@ grunt.initConfig({
 
 ## Contributing
 In lieu of a formal styleguide, take care to maintain the existing coding style. Add unit tests for any new or changed functionality. Lint and test your code using [Grunt](http://gruntjs.com/).
-
-## Disclaimer
-This release has no unit test coverage. Use at your own risk.
 
 ## Release History
 11/8/2018 - 0.0.1-beta.1

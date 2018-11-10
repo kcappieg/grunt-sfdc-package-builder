@@ -30,7 +30,7 @@ module.exports = function(grunt) {
       clearCache: false,
       dest: 'package.xml',
       apiVersion: '44.0',
-      diffDirectory: '',
+      srcDir: '',
       diffLog: './diff.log'
     });
 
