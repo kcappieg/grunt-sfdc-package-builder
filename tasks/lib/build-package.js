@@ -256,7 +256,10 @@ class PackageBuilder {
           if (oldHash !== hash) {
             newPair = extractPair(filePath);
 
-            diffLog[hashFilePath] = hash;
+            diffLog[hashFilePath] = {
+              hash,
+              relativePath: filePath
+            };
           }
         } catch (fileErr) {
           //file not found in old hash means it's a new file and should be added
@@ -459,7 +462,7 @@ class PackageBuilder {
     }
 
     for (let prop in diffLog) {
-      this.grunt.file.write(prop, diffLog[prop]);
+      this.grunt.file.write(prop, diffLog[prop].hash);
     }
 
     this.grunt.file.delete(this.options.diffLog);
@@ -473,7 +476,6 @@ class PackageBuilder {
     //Catch errors and clean up
     prom.catch((err) => {
       this.util.logErr(err);
-      this.grunt.warn('Error');
 
       doneErr = err;
     })

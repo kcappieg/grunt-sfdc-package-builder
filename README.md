@@ -195,6 +195,10 @@ Default: `./diff.log`
 
 When building a package using a diff, a log file of all diffs detected is written to the file specified by this option. When the `commit` action is used, the diffs in this file are written to the diff cache for use in later diff comparisons, and this file is deleted.
 
+The diff log is a JSON formatted file where each key corresponds to the location of a file's current hash value, and each value is an object with the following properties:
+- `hash` - Hash string
+- `relativePath` - The path of the file relative to the root directory of the org source
+
 ### Usage Examples
 
 #### Examples
