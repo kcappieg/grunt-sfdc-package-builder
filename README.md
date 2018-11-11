@@ -47,7 +47,7 @@ This task runs locally (besides the callouts to the Salesforce Metadata Api) and
 
 This task also offers functionality to build manifests for only changed files via hash diff detection. Additional "actions" are available to support tasks that wish to use this functionality to automatically deploy only changed components.
 
-Lastly, an experimental feature being developed is the ability to build a full metadata component directory with manifest from a given source directory for use in a metadata deploy. It is unlikely to be fully featured for all situations and component types as there are other tools to accomplish this, but the primary goal is to allow quick and easy deploys of source code like Apex and Aura that would be developed locally and pushed to Salesforce. The author recommends that a prospective user looks into using standard SFDX techniques to accomplish this, however if you, like me, are in the midst of transitioning and need a stop-gap, this feature may work for you.
+Lastly, an experimental feature being developed is the ability to build a full metadata component directory with manifest from a given source directory for use in a metadata deploy. It is unlikely to be fully featured for all situations and component types as there are other tools to accomplish this, but the primary goal is to allow quick and easy deploys of source code like Apex and Aura that would be developed locally and pushed to Salesforce. The author recommends that a prospective user looks into using standard SFDX techniques to accomplish this, however if you, like me, are in the midst of transitioning and need a stop-gap, this feature may work for you. (The components this feature has been tested with are code components including ApexClass, ApexTrigger, and AuraDefinitionBundle)
 
 ### Usage
 
@@ -86,7 +86,7 @@ grunt sfdc_package_builder:default
 
 #### `diff`
 
-This action prepares for a "diff" build by hashing all files in the `diffDirectory` and storing them on disk for reference. Any diff build will rehash selected files and only include them in the result `package.xml` if the hash value is different.
+This action prepares for a "diff" build by hashing all files in the `srcDir` and storing them on disk for reference. Any diff build will rehash selected files and only include them in the result `package.xml` if the hash value is different.
 
 ```shell
 grunt sfdc_package_builder:diff_example:diff

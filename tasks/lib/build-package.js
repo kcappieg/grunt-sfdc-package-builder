@@ -250,65 +250,79 @@ class PackageBuilder {
     let pairsPromise = this.getHashes(rootdir, metaDescribe)
     .then((literalHashMap) => {
       const hashdir = literalHashMap.hashdir;
-      const changedPairs = [];
+      const changedMembers = [];
       const diffLog = {};
 
       const cmpSet = new Set();
       for (let [filePath, hash] of literalHashMap) {
-        let newPair;
+        let memberInfo;
         try {
           const hashFilePath = hashdir + filePath;
 
           let oldHash = this.grunt.file.read(hashFilePath);
           if (oldHash !== hash) {
-            newPair = extractPair(filePath);
+            memberInfo = extractMemberInfo(filePath);
 
             diffLog[hashFilePath] = {
               hash,
-              relativePath: filePath
+              relativePath: filePath,
+              memberInfo
             };
           }
         } catch (fileErr) {
           //file not found in old hash means it's a new file and should be added
           this.util.logErr(fileErr);
-          newPair = extractPair(filePath);
+          memberInfo = extractMemberInfo(filePath);
         }
 
-        if (newPair) {
+        if (memberInfo) {
           //filter out duplicates - same component, different files
-          let setStr = newPair.dirName + newPair.memberName;
+          let setStr = memberInfo.dirName + memberInfo.memberName;
           if (!cmpSet.has(setStr)) {
-            changedPairs.push(newPair);
+            changedMembers.push(memberInfo);
             cmpSet.add(setStr);
           }
         }
       }
 
-      if (changedPairs.length === 0) {
+      if (changedMembers.length === 0) {
         throw new Error('No files have changed - no manifest necessary');
       }
 
       //write log of diff-ed files here
-      this.grunt.file.write(this.options.diffLog, JSON.stringify(diffLog));
+      this.grunt.file.write(
+        this.options.diffLog, JSON.stringify(diffLog, (key, value) => {
+          return key === 'memberInfo' ? undefined : value;
+        })
+      );
 
       //if deployDir specified, write components
       if (!!this.options.deployDir) {
         for (let prop in diffLog) {
-          let filePath = diffLog[prop].relativePath;
-          let original = path.resolve(rootdir, filePath);
-          let newFile = path.resolve(this.options.deployDir, filePath);
+          const {relativePath: filePath, memberInfo} = diffLog[prop];
 
-          this.grunt.file.copy(original, newFile);
+          if (memberInfo.dirName === 'aura') {
+            const originalCmpDir = path.resolve(rootdir, memberInfo.dirName, memberInfo.memberName);
+            const newCmpDir = path.resolve(this.options.deployDir, memberInfo.dirName, memberInfo.memberName);
 
-          //check for accompanying meta file
-          let originalMeta = original + '-meta.xml';
-          if (this.grunt.file.exists(originalMeta)) {
-            this.grunt.file.copy(originalMeta, newFile + '-meta.xml');
+            this.grunt.file.recurse(originalCmpDir, (abspath, cmpdir, subdir, filename) => {
+              this.grunt.file.copy(abspath, path.resolve(newCmpDir, filename));
+            });
+          } else {
+            let original = path.resolve(rootdir, filePath);
+            let newFile = path.resolve(this.options.deployDir, filePath);
+            this.grunt.file.copy(original, newFile);
+
+            //check for accompanying meta file
+            let originalMeta = original + '-meta.xml';
+            if (this.grunt.file.exists(originalMeta)) {
+              this.grunt.file.copy(originalMeta, newFile + '-meta.xml');
+            }
           }
         }
       }
 
-      return changedPairs;
+      return changedMembers;
     });
 
     const typeByDirname = {};
@@ -322,13 +336,13 @@ class PackageBuilder {
     //query all items to filter out managed
     if (this.options.excludeManaged.length >>> 0 !== 0) {
       let itemizedTypes = {};
-      finalPromise = pairsPromise.then((changedPairs) => {
+      finalPromise = pairsPromise.then((changedMembers) => {
         //prep queries
         const querySets = [];
         let currentQueryList;
         let counter = 0;
 
-        changedPairs.forEach((pair) => {
+        changedMembers.forEach((pair) => {
           let type = typeByDirname[pair.dirName];
 
           //adding to query list if we haven't seen the type before or it's in
@@ -368,10 +382,10 @@ class PackageBuilder {
 
     //simply aggregate items into lists by type
     } else {
-      finalPromise = pairsPromise.then((changedPairs) => {
+      finalPromise = pairsPromise.then((changedMembers) => {
         let itemizedTypes = {};
 
-        changedPairs.forEach((pair) => {
+        changedMembers.forEach((pair) => {
           let type = typeByDirname[pair.dirName];
           if (!itemizedTypes[type]) itemizedTypes[type] = [];
 
@@ -513,7 +527,7 @@ class PackageBuilder {
   }
 }
 
-function extractPair(filePath) {
+function extractMemberInfo(filePath) {
   const pathArray = path.normalize(filePath).split(path.sep);
   const dirName = pathArray[0];
 
