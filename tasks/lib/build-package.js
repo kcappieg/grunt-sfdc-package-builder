@@ -119,7 +119,9 @@ class PackageBuilder {
             !noWildcardsForVersion.includes(meta.xmlName) &&
             (this.options.excludeManaged === true ||
               this.options.excludeManaged.includes(meta.xmlName) ||
-              this.options.excludeManaged.includes(meta.directoryName))) {
+              this.options.excludeManaged.includes(meta.directoryName)) &&
+            (!this.options.includeManaged.includes(meta.xmlName) &&
+              !this.options.includeManaged.includes(meta.directoryName))) {
           wildcardTypes.push(meta);
         } else {
           typesToQuery.push(meta);
@@ -231,6 +233,9 @@ class PackageBuilder {
           }
         });
       });
+      if (this.options.dump) { //debug - dump all items
+        this.grunt.file.write(this.options.dump,JSON.stringify(itemizedTypes));
+      }
 
       return {wildcardTypes, itemizedTypes};
     });

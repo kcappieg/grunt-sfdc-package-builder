@@ -37,6 +37,7 @@ module.exports = function(grunt) {
     Object.assign(options, this.data);
 
     if (options.excludeManaged === false) options.excludeManaged = [];
+    if (!Array.isArray(options.includeManaged)) options.includeManaged = [];
 
     if (!Array.isArray(options.includeSpecial)) { options.includeSpecial = []; }
 

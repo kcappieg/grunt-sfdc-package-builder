@@ -164,7 +164,13 @@ Default: `false`
 
 If `true`, managed package data will be excluded for all chosen metadata types. If a `MetaList`, each list entry will be excluded, but all others will include managed package metadata. Entries that are not "included" via the `all` or `included` options are ignored.
 
-Note that any types explicitly specified by excludeManaged will not use wildcards
+#### options.includeManaged
+
+Type: `MetaList`
+
+If specified and `options.excludeManaged` is `true`, this list can specify metadata types for which managed package components *should* be included
+
+*Note: The excludeManaged and includeManaged options are a little inconsistent because certain functionality was added later for convenience. A later release will likely alter the structure of these options*
 
 #### options.clearCache
 Type: `boolean`

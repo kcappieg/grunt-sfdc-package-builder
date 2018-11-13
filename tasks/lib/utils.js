@@ -238,9 +238,14 @@ module.exports = function(grunt) {
     },
 
     includeMetadataItem: function(options, item) {
-      if (item.manageableState !== 'unmanaged') {
-        if (options.excludeManaged === true ||
-            (Array.isArray(options.excludeManaged) && options.excludeManaged.includes(item.type))) {
+      if (!!item.manageableState && item.manageableState !== 'unmanaged') {
+        const excludeManaged = options.excludeManaged === true;
+        const specificallyExcluded =
+          Array.isArray(options.excludeManaged) && options.excludeManaged.includes(item.type);
+        const specificallyIncluded =
+          Array.isArray(options.includeManaged) && options.includeManaged.includes(item.type);
+
+        if ((excludeManaged && !specificallyIncluded) || specificallyExcluded) {
           return false;
         }
       }

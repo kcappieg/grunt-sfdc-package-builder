@@ -37,12 +37,15 @@ module.exports = function(grunt) {
       },
       all: {
         dest: 'tmp/package-all.xml',
+        useWildcards: false,
+        excludeManaged: true,
         all: true
       },
       noManaged: {
         dest: 'tmp/package-no_managed.xml',
         all: true,
-        excludeManaged: true
+        excludeManaged: true,
+        includeManaged: ['CustomObject']
       },
       withChildType: {
         dest: 'tmp/package-custom_fields.xml',
