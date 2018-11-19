@@ -38,8 +38,8 @@ module.exports = function(grunt) {
       all: {
         dest: 'tmp/package-all.xml',
         useWildcards: false,
-        excludeManaged: true,
-        all: true
+        all: true,
+        dump: 'tmp/debug.log'
       },
       noManaged: {
         dest: 'tmp/package-no_managed.xml',

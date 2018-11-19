@@ -233,8 +233,18 @@ class PackageBuilder {
           }
         });
       });
-      if (this.options.dump) { //debug - dump all items
+      if (this.options.dump) { //debug - dump all retrieved items
         this.grunt.file.write(this.options.dump,JSON.stringify(itemizedTypes));
+      }
+
+      //de-dup the list
+      const itemSet = new Set();
+      for (let typeName in itemizedTypes) {
+        itemizedTypes[typeName] = itemizedTypes[typeName].filter((el) => {
+          let dup = itemSet.has(el.fullName);
+          itemSet.add(el.fullName);
+          return dup;
+        })
       }
 
       return {wildcardTypes, itemizedTypes};
@@ -261,8 +271,8 @@ class PackageBuilder {
       const cmpSet = new Set();
       for (let [filePath, hash] of literalHashMap) {
         let memberInfo;
+        const hashFilePath = hashdir + filePath;
         try {
-          const hashFilePath = hashdir + filePath;
 
           let oldHash = this.grunt.file.read(hashFilePath);
           if (oldHash !== hash) {
@@ -278,6 +288,11 @@ class PackageBuilder {
           //file not found in old hash means it's a new file and should be added
           this.util.logErr(fileErr);
           memberInfo = extractMemberInfo(filePath);
+          diffLog[hashFilePath] = {
+            hash,
+            relativePath: filePath,
+            memberInfo
+          };
         }
 
         if (memberInfo) {
