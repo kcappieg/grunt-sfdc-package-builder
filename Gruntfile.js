@@ -44,6 +44,7 @@ module.exports = function(grunt) {
       noManaged: {
         dest: 'tmp/package-no_managed.xml',
         all: true,
+        useWildcards: false,
         excludeManaged: true,
         includeManaged: ['CustomObject']
       },

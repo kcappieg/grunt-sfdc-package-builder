@@ -1,7 +1,7 @@
 {
   "name": "grunt-sfdc-package-builder",
   "description": "Package.xml builder for SFDC platform as grunt task",
-  "version": "0.0.1-beta.10",
+  "version": "0.0.1-beta.11",
   "homepage": "https://github.com/CMF-Group-Inc/grunt-sfdc-package-builder",
   "author": {
     "name": "Kevin C. Gall",

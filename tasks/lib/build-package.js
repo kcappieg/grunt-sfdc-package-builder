@@ -243,7 +243,7 @@ class PackageBuilder {
         itemizedTypes[typeName] = itemizedTypes[typeName].filter((el) => {
           let dup = itemSet.has(el.fullName);
           itemSet.add(el.fullName);
-          return dup;
+          return !dup;
         })
       }
 
