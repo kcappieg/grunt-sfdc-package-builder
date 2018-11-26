@@ -46,7 +46,8 @@ module.exports = function(grunt) {
         all: true,
         useWildcards: false,
         excludeManaged: true,
-        includeManaged: ['CustomObject']
+        includeSpecial: ['CustomObject'],
+        dump: 'tmp/dump.txt'
       },
       withChildType: {
         dest: 'tmp/package-custom_fields.xml',
@@ -61,6 +62,14 @@ module.exports = function(grunt) {
         srcDir: './tmp/retrieve/unpackaged/',
         diffLog: './d.log',
         deployDir: './tmp/deploy'
+      },
+      test: {
+        dest: 'tmp/test.xml',
+        useWildcards: false,
+        all: true,
+        // included: ['CustomTab'],
+        excludeManaged: true,
+        dump: 'tmp/dump.txt'
       }
     },
 

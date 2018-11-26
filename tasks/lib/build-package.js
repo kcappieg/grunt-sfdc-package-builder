@@ -238,8 +238,8 @@ class PackageBuilder {
       }
 
       //de-dup the list
-      const itemSet = new Set();
       for (let typeName in itemizedTypes) {
+        const itemSet = new Set();
         itemizedTypes[typeName] = itemizedTypes[typeName].filter((el) => {
           let dup = itemSet.has(el.fullName);
           itemSet.add(el.fullName);
