@@ -30,12 +30,14 @@ module.exports = function(grunt) {
       clearCache: false,
       dest: 'package.xml',
       apiVersion: '46.0',
-      diffDirectory: '',
+      srcDir: '',
+      diffLog: './diff.log'
     });
 
     Object.assign(options, this.data);
 
     if (options.excludeManaged === false) options.excludeManaged = [];
+    if (!Array.isArray(options.includeManaged)) options.includeManaged = [];
 
     if (!Array.isArray(options.includeSpecial)) { options.includeSpecial = []; }
 
@@ -97,6 +99,8 @@ If not diff-ing, alternatively specify "includeSpecial"`
         builder.buildPackage();
       } else if (action === 'diff') {
         builder.writeHashes();
+      } else if (action === 'commit') {
+        builder.commitDiffs();
       } else {
         grunt.warn(`Action ${action} not supported`);
         return;

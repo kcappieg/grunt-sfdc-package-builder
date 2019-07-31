@@ -36,7 +36,7 @@ class PackageBuilder {
 
   buildPackage() {
     let cmpListGetter;
-    if (!!this.options.diffDirectory) {
+    if (!!this.options.srcDir) {
       cmpListGetter = this.getChangedComponents.bind(this);
     } else {
       cmpListGetter = this.getComponentsForNewPackage.bind(this);
@@ -85,6 +85,13 @@ class PackageBuilder {
         indent: '  ',
         newline: '\n',
       }));
+
+      if (this.options.srcDir && this.options.deployDir) {
+        this.grunt.file.copy(
+          this.options.dest,
+          path.resolve(this.options.deployDir, 'package.xml')
+        );
+      }
     });
 
     this.clean(buildPkgPromise);
@@ -112,7 +119,9 @@ class PackageBuilder {
             !noWildcardsForVersion.includes(meta.xmlName) &&
             (this.options.excludeManaged === true ||
               this.options.excludeManaged.includes(meta.xmlName) ||
-              this.options.excludeManaged.includes(meta.directoryName))) {
+              this.options.excludeManaged.includes(meta.directoryName)) &&
+            (!this.options.includeManaged.includes(meta.xmlName) &&
+              !this.options.includeManaged.includes(meta.directoryName))) {
           wildcardTypes.push(meta);
         } else {
           typesToQuery.push(meta);
@@ -224,6 +233,19 @@ class PackageBuilder {
           }
         });
       });
+      if (this.options.dump) { //debug - dump all retrieved items
+        this.grunt.file.write(this.options.dump,JSON.stringify(itemizedTypes));
+      }
+
+      //de-dup the list
+      for (let typeName in itemizedTypes) {
+        const itemSet = new Set();
+        itemizedTypes[typeName] = itemizedTypes[typeName].filter((el) => {
+          let dup = itemSet.has(el.fullName);
+          itemSet.add(el.fullName);
+          return !dup;
+        })
+      }
 
       return {wildcardTypes, itemizedTypes};
     });
@@ -234,42 +256,93 @@ class PackageBuilder {
    *  and itemizedTypes properties.
    */
   getChangedComponents(metaDescribe) {
-    const rootdir = this.options.diffDirectory;
+    const rootdir = this.options.srcDir;
     if (!rootdir) {
-      this.grunt.warn('Cannot get changed files: no directory specified. Include the "diffDirectory" option');
+      this.grunt.warn('Cannot get changed files: no directory specified. Include the "srcDir" option');
       this.done(false);
     }
 
     let pairsPromise = this.getHashes(rootdir, metaDescribe)
     .then((literalHashMap) => {
       const hashdir = literalHashMap.hashdir;
-
-      const changedPairs = [];
+      const changedMembers = [];
+      const diffLog = {};
 
       const cmpSet = new Set();
       for (let [filePath, hash] of literalHashMap) {
-        let newPair;
+        let memberInfo;
+        const hashFilePath = hashdir + filePath;
         try {
-          let oldHash = this.grunt.file.read(hashdir + filePath);
-          if (oldHash !== hash) newPair = extractPair(filePath);
+
+          let oldHash = this.grunt.file.read(hashFilePath);
+          if (oldHash !== hash) {
+            memberInfo = extractMemberInfo(filePath);
+
+            diffLog[hashFilePath] = {
+              hash,
+              relativePath: filePath,
+              memberInfo
+            };
+          }
         } catch (fileErr) {
           //file not found in old hash means it's a new file and should be added
           this.util.logErr(fileErr);
-          newPair = extractPair(filePath);
+          memberInfo = extractMemberInfo(filePath);
+          diffLog[hashFilePath] = {
+            hash,
+            relativePath: filePath,
+            memberInfo
+          };
         }
 
-        if (newPair) {
+        if (memberInfo) {
           //filter out duplicates - same component, different files
-          let setStr = newPair.dirName + newPair.memberName;
+          let setStr = memberInfo.dirName + memberInfo.memberName;
           if (!cmpSet.has(setStr)) {
-            changedPairs.push(newPair);
+            changedMembers.push(memberInfo);
             cmpSet.add(setStr);
           }
-
         }
       }
 
-      return changedPairs;
+      if (changedMembers.length === 0) {
+        throw new Error('No files have changed - no manifest necessary');
+      }
+
+      //write log of diff-ed files here
+      this.grunt.file.write(
+        this.options.diffLog, JSON.stringify(diffLog, (key, value) => {
+          return key === 'memberInfo' ? undefined : value;
+        })
+      );
+
+      //if deployDir specified, write components
+      if (!!this.options.deployDir) {
+        for (let prop in diffLog) {
+          const {relativePath: filePath, memberInfo} = diffLog[prop];
+
+          if (memberInfo.dirName === 'aura') {
+            const originalCmpDir = path.resolve(rootdir, memberInfo.dirName, memberInfo.memberName);
+            const newCmpDir = path.resolve(this.options.deployDir, memberInfo.dirName, memberInfo.memberName);
+
+            this.grunt.file.recurse(originalCmpDir, (abspath, cmpdir, subdir, filename) => {
+              this.grunt.file.copy(abspath, path.resolve(newCmpDir, filename));
+            });
+          } else {
+            let original = path.resolve(rootdir, filePath);
+            let newFile = path.resolve(this.options.deployDir, filePath);
+            this.grunt.file.copy(original, newFile);
+
+            //check for accompanying meta file
+            let originalMeta = original + '-meta.xml';
+            if (this.grunt.file.exists(originalMeta)) {
+              this.grunt.file.copy(originalMeta, newFile + '-meta.xml');
+            }
+          }
+        }
+      }
+
+      return changedMembers;
     });
 
     const typeByDirname = {};
@@ -283,13 +356,13 @@ class PackageBuilder {
     //query all items to filter out managed
     if (this.options.excludeManaged.length >>> 0 !== 0) {
       let itemizedTypes = {};
-      finalPromise = pairsPromise.then((changedPairs) => {
+      finalPromise = pairsPromise.then((changedMembers) => {
         //prep queries
         const querySets = [];
         let currentQueryList;
         let counter = 0;
 
-        changedPairs.forEach((pair) => {
+        changedMembers.forEach((pair) => {
           let type = typeByDirname[pair.dirName];
 
           //adding to query list if we haven't seen the type before or it's in
@@ -329,10 +402,10 @@ class PackageBuilder {
 
     //simply aggregate items into lists by type
     } else {
-      finalPromise = pairsPromise.then((changedPairs) => {
+      finalPromise = pairsPromise.then((changedMembers) => {
         let itemizedTypes = {};
 
-        changedPairs.forEach((pair) => {
+        changedMembers.forEach((pair) => {
           let type = typeByDirname[pair.dirName];
           if (!itemizedTypes[type]) itemizedTypes[type] = [];
 
@@ -412,9 +485,9 @@ class PackageBuilder {
   }
 
   writeHashes() {
-    const rootdir = this.options.diffDirectory;
+    const rootdir = this.options.srcDir;
     if (!rootdir) {
-      this.grunt.warn('Cannot get changed files: no directory specified. Include the "diffDirectory" option');
+      this.grunt.warn('Cannot get changed files: no directory specified. Include the "srcDir" option');
       this.done(false);
     }
 
@@ -437,13 +510,30 @@ class PackageBuilder {
     this.clean(writePromise);
   }
 
+  commitDiffs() {
+    let diffLog
+    try {
+      diffLog = this.grunt.file.readJSON(this.options.diffLog);
+    } catch (err) {
+      this.done(this.grunt.util.error(`Problem reading diff log ${this.options.diffLog}`, err));
+      return;
+    }
+
+    for (let prop in diffLog) {
+      this.grunt.file.write(prop, diffLog[prop].hash);
+    }
+
+    this.grunt.file.delete(this.options.diffLog);
+
+    this.done();
+  }
+
   clean(prom) {
     let doneErr;
 
     //Catch errors and clean up
     prom.catch((err) => {
       this.util.logErr(err);
-      this.grunt.warn('Error');
 
       doneErr = err;
     })
@@ -457,7 +547,7 @@ class PackageBuilder {
   }
 }
 
-function extractPair(filePath) {
+function extractMemberInfo(filePath) {
   const pathArray = path.normalize(filePath).split(path.sep);
   const dirName = pathArray[0];
 

@@ -37,12 +37,17 @@ module.exports = function(grunt) {
       },
       all: {
         dest: 'tmp/package-all.xml',
-        all: true
+        useWildcards: false,
+        all: true,
+        dump: 'tmp/debug.log'
       },
       noManaged: {
         dest: 'tmp/package-no_managed.xml',
         all: true,
-        excludeManaged: true
+        useWildcards: false,
+        excludeManaged: true,
+        includeSpecial: ['CustomObject'],
+        dump: 'tmp/dump.txt'
       },
       withChildType: {
         dest: 'tmp/package-custom_fields.xml',
@@ -54,7 +59,17 @@ module.exports = function(grunt) {
       diffOpts: {
         all: true,
         dest: 'tmp/package-diff.xml',
-        diffDirectory: './tmp/retrieve/unpackaged/',
+        srcDir: './tmp/retrieve/unpackaged/',
+        diffLog: './d.log',
+        deployDir: './tmp/deploy'
+      },
+      test: {
+        dest: 'tmp/test.xml',
+        useWildcards: false,
+        all: true,
+        // included: ['CustomTab'],
+        excludeManaged: true,
+        dump: 'tmp/dump.txt'
       }
     },
 
