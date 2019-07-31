@@ -59,7 +59,7 @@ module.exports = function(grunt) {
       diffOpts: {
         all: true,
         dest: 'tmp/package-diff.xml',
-        srcDir: './tmp/retrieve/unpackaged/',
+        srcDir: './tmp/mdapi/unpackaged/',
         diffLog: './d.log',
         deployDir: './tmp/deploy'
       },
@@ -81,7 +81,7 @@ module.exports = function(grunt) {
           summary: true
         }
       }
-      
+
     }
 
   });

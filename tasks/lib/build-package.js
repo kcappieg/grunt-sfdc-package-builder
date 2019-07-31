@@ -321,22 +321,33 @@ class PackageBuilder {
         for (let prop in diffLog) {
           const {relativePath: filePath, memberInfo} = diffLog[prop];
 
-          if (memberInfo.dirName === 'aura') {
+          //aura and lwc are directories with many files. Copy all
+          if (['aura','lwc','lightningcomponents'].includes(memberInfo.dirName)){
             const originalCmpDir = path.resolve(rootdir, memberInfo.dirName, memberInfo.memberName);
             const newCmpDir = path.resolve(this.options.deployDir, memberInfo.dirName, memberInfo.memberName);
 
             this.grunt.file.recurse(originalCmpDir, (abspath, cmpdir, subdir, filename) => {
-              this.grunt.file.copy(abspath, path.resolve(newCmpDir, filename));
+              let realSubDir = subdir || '';
+              realSubDir = realSubDir.startsWith('/') ? realSubDir.substring(1) : realSubDir;
+
+              this.grunt.file.copy(abspath, path.resolve(newCmpDir, realSubDir, filename));
             });
           } else {
             let original = path.resolve(rootdir, filePath);
             let newFile = path.resolve(this.options.deployDir, filePath);
             this.grunt.file.copy(original, newFile);
 
-            //check for accompanying meta file
+            // check for accompanying meta file
             let originalMeta = original + '-meta.xml';
             if (this.grunt.file.exists(originalMeta)) {
               this.grunt.file.copy(originalMeta, newFile + '-meta.xml');
+            }
+            // check if this is a meta file and bring its accompanying content file
+            if (original.indexOf('-meta.xml') > -1) {
+              const originalContent = original.replace('-meta.xml', '');
+              if (this.grunt.file.exists(originalContent)) {
+                this.grunt.file.copy(originalContent, newFile.replace('-meta.xml',''))
+              }
             }
           }
         }
