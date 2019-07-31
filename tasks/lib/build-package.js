@@ -134,7 +134,7 @@ class PackageBuilder {
         xmlName: type
       });
     });
-    
+
     const listQuerySets = [];
     let counter = 0;
     let querySet;
@@ -220,7 +220,7 @@ class PackageBuilder {
         queryResult[0].result.forEach((contentItem) => {
           //filter managed items if applicable
           if (this.util.includeMetadataItem(this.options, contentItem)) {
-            itemizedTypes[contentItem.type].push(contentItem);            
+            itemizedTypes[contentItem.type].push(contentItem);
           }
         });
       });
@@ -319,7 +319,7 @@ class PackageBuilder {
           queryResult[0].result.forEach((contentItem) => {
             //filter managed items if applicable
             if (this.util.includeMetadataItem(this.options, contentItem)) {
-              itemizedTypes[contentItem.type].push(contentItem);            
+              itemizedTypes[contentItem.type].push(contentItem);
             }
           });
         });
@@ -464,7 +464,7 @@ function extractPair(filePath) {
   let memberName;
   let folder = '';
 
-  if (dirName === 'aura') {
+  if (dirName === 'aura' || dirName === 'lwc') {
     memberName = pathArray[1]; //the directory containing the files for an aura component
 
   //a folder-based type. Member name is concat of path

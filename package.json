@@ -22,9 +22,9 @@
     "test": "grunt test"
   },
   "devDependencies": {
-    "grunt": "^1.0.3",
+    "grunt": "^1.0.4",
     "grunt-contrib-clean": "^2.0.0",
-    "grunt-contrib-jasmine": "^2.0.2",
+    "grunt-contrib-jasmine": "^2.1.0",
     "grunt-contrib-jshint": "^2.0.0",
     "jasmine": "^3.3.0"
   },

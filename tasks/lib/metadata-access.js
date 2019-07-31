@@ -1,7 +1,7 @@
 /**
  *  Defines info on how to access different metadata types via
  *  manifest
- *  Default represents API Version 44.0 (current latest as of release)
+ *  Default represents API Version 44.0 (most recent audit)
  */
 "use strict";
 const noWildcardBacking = {

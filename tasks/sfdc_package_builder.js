@@ -29,7 +29,7 @@ module.exports = function(grunt) {
       excludeManaged: false,
       clearCache: false,
       dest: 'package.xml',
-      apiVersion: '44.0',
+      apiVersion: '46.0',
       diffDirectory: '',
     });
 

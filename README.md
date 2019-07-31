@@ -129,7 +129,7 @@ The destination for the package.xml file
 
 #### options.apiVersion
 Type: `String`
-Default: `44.0`
+Default: `46.0`
 
 The Metadata API version to use. Defaults to latest as of package release
 
