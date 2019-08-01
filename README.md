@@ -231,6 +231,15 @@ If specified, this directory is the location of the metadata deploy source that 
 
 This option is ignored if `options.srcDir` is not specified.
 
+#### options.ignore
+
+Type: `Array<String>`
+Default: `['.eslintrc.json','jsconfig.json','.gitignore','.npmignore','.forceignore']`
+
+List of file names to ignore in diff-ing operations. These files will not be included in any hashing or deploy package.
+
+*Note that as of this release, matching patterns are not supported. Any file name listed will be ignored from every directory in which it is located*
+
 ### Usage Examples
 
 #### Examples

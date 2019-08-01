@@ -8,7 +8,16 @@
 
 'use strict';
 
-//Utils
+// Constants
+const DEFAULT_EXCLUDED_FILES = [
+  '.eslintrc.json',
+  'jsconfig.json',
+  '.gitignore',
+  '.npmignore',
+  '.forceignore'
+];
+
+// Utils
 const PackageBuilder = require('./lib/build-package.js');
 
 module.exports = function(grunt) {
@@ -31,7 +40,8 @@ module.exports = function(grunt) {
       dest: 'package.xml',
       apiVersion: '46.0',
       srcDir: '',
-      diffLog: './diff.log'
+      diffLog: './diff.log',
+      ignore: DEFAULT_EXCLUDED_FILES,
     });
 
     Object.assign(options, this.data);

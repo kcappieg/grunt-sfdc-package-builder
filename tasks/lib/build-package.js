@@ -482,6 +482,8 @@ class PackageBuilder {
         let metaPath = dir + metadir;
         if (this.grunt.file.exists(metaPath)) {
           this.grunt.file.recurse(dir + metadir, (abspath, rootdir, subdir, filename) => {
+            if (this.options.ignore.includes(filename)) return;
+
             let filePath = metadir + '/';
             if (subdir) filePath += subdir + '/';
             filePath += filename;
