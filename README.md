@@ -234,7 +234,7 @@ This option is ignored if `options.srcDir` is not specified.
 #### options.ignore
 
 Type: `Array<String>`
-Default: `['.eslintrc.json','jsconfig.json','.gitignore','.npmignore','.forceignore']`
+Default: `['.eslintrc.json','jsconfig.json','.gitignore','.npmignore','.forceignore', 'README.md']`
 
 List of file names to ignore in diff-ing operations. These files will not be included in any hashing or deploy package.
 

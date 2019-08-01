@@ -14,7 +14,8 @@ const DEFAULT_EXCLUDED_FILES = [
   'jsconfig.json',
   '.gitignore',
   '.npmignore',
-  '.forceignore'
+  '.forceignore',
+  'README.md'
 ];
 
 // Utils
