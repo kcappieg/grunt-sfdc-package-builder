@@ -327,6 +327,9 @@ class PackageBuilder {
             const newCmpDir = path.resolve(this.options.deployDir, memberInfo.dirName, memberInfo.memberName);
 
             this.grunt.file.recurse(originalCmpDir, (abspath, cmpdir, subdir, filename) => {
+              // hard code exception for the standard lwc test directory
+              if (subdir && subdir.includes('__tests__')) return;
+
               let realSubDir = subdir || '';
               realSubDir = realSubDir.startsWith('/') ? realSubDir.substring(1) : realSubDir;
 
